@@ -104,7 +104,7 @@ function parsePct(v) {
   const n = parseFloat(s);
   if (isNaN(n)) return 0;
   // если значение уже как доля (0.30), то оставляем; если как процент (30), делим
-  return Math.abs(n) > 1.5 ? n / 100 : n;
+  return Math.abs(n) > 1 ? n / 100 : n;
 }
 
 function findRow(data, label) {
