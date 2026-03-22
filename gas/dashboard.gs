@@ -31,23 +31,18 @@ function doGet(e) {
     return doGetDDSBalance();
   }
 
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json; charset=utf-8'
-  };
   try {
     const month = parseInt((e && e.parameter && e.parameter.month) || (new Date().getMonth() + 1));
     if (isNaN(month) || month < 1 || month > 12) throw new Error('Некорректный номер месяца');
     const data = getDashboardData(month);
-    return buildResponse(JSON.stringify({ ok: true, data }), headers);
+    return buildResponse(JSON.stringify({ ok: true, data }));
   } catch (err) {
-    return buildResponse(JSON.stringify({ ok: false, error: err.message }), headers);
+    return buildResponse(JSON.stringify({ ok: false, error: err.message }));
   }
 }
 
-function buildResponse(body, headers) {
-  const out = ContentService.createTextOutput(body).setMimeType(ContentService.MimeType.JSON);
-  return out;
+function buildResponse(body) {
+  return ContentService.createTextOutput(body).setMimeType(ContentService.MimeType.JSON);
 }
 
 // ═══════════════════ ГЛАВНАЯ ЛОГИКА ══════════════
