@@ -558,19 +558,29 @@ function renderKPI() {
   const { incoming, outgoing, netCF, opExpenses } = calcKPI(filteredRows);
   const cfClass = netCF >= 0 ? 'kpi-green' : 'kpi-red';
 
+  const hasFilter = !!(
+    document.getElementById('filterStore').value ||
+    document.getElementById('filterDirection').value ||
+    document.getElementById('filterType').value
+  );
+  const filterWarn = hasFilter
+    ? ' <span style="color:#F59E0B;cursor:help" title="Фильтры не влияют на остатки — они всегда считаются по всей компании">⚠</span>'
+    : '';
+
   // Остатки — если данные по всем месяцам ещё не загружены, показываем прочерк
-  let balanceStartHtml = monthlyBalance
-    ? `<div class="kpi-value kpi-val-balance">${fmt(calcBalance(currentMonth).balanceStart)}</div>`
+  const bal = monthlyBalance ? calcBalance(currentMonth) : null;
+  let balanceStartHtml = bal
+    ? `<div class="kpi-value kpi-val-balance">${fmt(bal.balanceStart)}</div>`
     : `<div class="kpi-value" style="color:#9CA3AF;font-size:16px">Загрузка…</div>`;
-  let balanceEndHtml = monthlyBalance
-    ? `<div class="kpi-value kpi-val-balance ${calcBalance(currentMonth).balanceEnd >= 0 ? 'bal-pos' : 'bal-neg'}">${fmt(calcBalance(currentMonth).balanceEnd)}</div>`
+  let balanceEndHtml = bal
+    ? `<div class="kpi-value kpi-val-balance ${bal.balanceEnd >= 0 ? '' : 'bal-neg'}">${fmt(bal.balanceEnd)}</div>`
     : `<div class="kpi-value" style="color:#9CA3AF;font-size:16px">Загрузка…</div>`;
 
   document.getElementById('kpiGrid').innerHTML = `
     <div class="kpi-card" style="border-left: 3px solid #8B5CF6;">
       <div class="kpi-label">Остаток на начало месяца</div>
       ${balanceStartHtml}
-      <div style="font-size:11px;color:#9CA3AF;margin-top:6px">по всем кошелькам</div>
+      <div style="font-size:11px;color:#9CA3AF;margin-top:6px">по всей компании${filterWarn}</div>
     </div>
     <div class="kpi-card kpi-green">
       <div class="kpi-label">Поступления</div>
@@ -583,7 +593,7 @@ function renderKPI() {
     <div class="kpi-card" style="border-left: 3px solid #8B5CF6;">
       <div class="kpi-label">Остаток на конец месяца</div>
       ${balanceEndHtml}
-      <div style="font-size:11px;color:#9CA3AF;margin-top:6px">по всем кошелькам</div>
+      <div style="font-size:11px;color:#9CA3AF;margin-top:6px">по всей компании${filterWarn}</div>
     </div>
     <div class="kpi-card ${cfClass}">
       <div class="kpi-label">Чистый Cash Flow</div>
