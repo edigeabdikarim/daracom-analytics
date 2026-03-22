@@ -1001,24 +1001,7 @@ function loadAllMonths() {
 
 function _refreshAfterMonthLoad() {
   if (expensesTab === 'table') { renderMatrixTable(); return; }
-  // Обновить только открытые expand-тела
-  if (!Object.keys(expandedArticles).length) return;
-  _artItems.forEach((item, idx) => {
-    if (!expandedArticles[item.keyStr]) return;
-    const bodies = document.getElementById('articlesList')
-      ?.querySelectorAll('.article-expand-body.open');
-    // Ищем тело по порядку (idx-й open-body в списке)
-    if (bodies) {
-      let openCount = 0;
-      const allBodies = document.getElementById('articlesList')
-        ?.querySelectorAll('.article-expand-body');
-      if (allBodies && allBodies[idx]) {
-        if (allBodies[idx].classList.contains('open')) {
-          allBodies[idx].innerHTML = buildExpandBody(item.name, item.type);
-        }
-      }
-    }
-  });
+  if (Object.keys(expandedArticles).length) renderExpandableList();
 }
 
 // ─── MATRIX TABLE ─────────────────────────────────────
