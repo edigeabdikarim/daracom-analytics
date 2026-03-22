@@ -289,6 +289,22 @@ function getOPiUTableData(month) {
 
   var lastRow = sheet.getLastRow();
   var raw = sheet.getRange(1, 1, lastRow, 13).getValues();
+
+  // Определяем строки с объединёнными ячейками по столбцам магазинов (C-K = cols 3-11).
+  // getValues() для объединённой ячейки возвращает значение только в top-left ячейке,
+  // остальные ячейки merge возвращают пустую строку — что даёт неверные per-store значения.
+  var storeMergedRows = {};
+  try {
+    sheet.getMergedRanges().forEach(function(r) {
+      // Merge "по магазинам" — если объединение охватывает col C (3) и минимум col D (4)
+      if (r.getColumn() <= 3 && r.getLastColumn() >= 4) {
+        for (var ri = r.getRow() - 1; ri <= r.getLastRow() - 1; ri++) {
+          storeMergedRows[ri] = true; // 0-based индекс строки
+        }
+      }
+    });
+  } catch (e) { /* игнорируем если getMergedRanges недоступен */ }
+
   var rows = [];
   var currentParent = null;
 
@@ -298,14 +314,17 @@ function getOPiUTableData(month) {
     if (!label) continue;
 
     var isGroup = OPIU_GROUP_LABELS.indexOf(label) !== -1;
+    var isMerged = !!storeMergedRows[i];
 
-    // Собираем значения по всем магазинам + Итого
+    // Собираем значения по всем магазинам + Итого.
+    // Для объединённых строк: store values = null (нет побочных данных),
+    // только Итого из col M — корректная сумма по компании.
     var values = {};
     var hasNonZero = false;
     for (var j = 0; j < OPIU_ALL_STORE_NAMES.length; j++) {
-      var v = parseNum(raw[i][OPIU_ALL_COLS[j]]);
+      var v = isMerged ? null : parseNum(raw[i][OPIU_ALL_COLS[j]]);
       values[OPIU_ALL_STORE_NAMES[j]] = v;
-      if (v !== 0) hasNonZero = true;
+      if (v !== null && v !== 0) hasNonZero = true;
     }
     var totalVal = parseNum(raw[i][TOTAL_COL]);
     values['Итого'] = totalVal;
@@ -314,10 +333,10 @@ function getOPiUTableData(month) {
     if (isGroup) {
       // Групповые строки ВСЕГДА добавляем, даже если все значения = 0
       currentParent = label;
-      rows.push({ label: label, type: 'group', parent: null, values: values });
+      rows.push({ label: label, type: 'group', parent: null, values: values, merged: isMerged });
     } else if (hasNonZero) {
       // Подстатьи пропускаем только если все нули
-      rows.push({ label: label, type: 'item', parent: currentParent, values: values });
+      rows.push({ label: label, type: 'item', parent: currentParent, values: values, merged: isMerged });
     }
     // Иначе — пропускаем строку (пустые разделители)
   }
