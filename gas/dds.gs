@@ -105,13 +105,14 @@ function getDDSBalanceSummary() {
     if (String(allRows[i][0]) === 'Месяц' && String(allRows[i][1]) === 'Год') { headerIdx = i; break; }
   }
 
+  // Для расчёта остатка: включаем ВСЕ типы операций.
+  // Технические операции (переводы между кошельками) нейтральны — они дают +X и −X, нетто = 0.
+  // Финансовая деятельность (займы, вклады) учитывается корректно.
   const monthly = {};
   for (let i = headerIdx + 1; i < allRows.length; i++) {
     const r = allRows[i];
     const msc = parseInt(r[2]);
     if (isNaN(msc) || msc < 1 || msc > 12) continue;
-    const activity = String(r[14]).trim();
-    if (activity === 'Техническая операция') continue;
     const type = String(r[12]).trim();
     const amount = parseNumDDS(r[4]);
     if (amount === 0 && !String(r[3]).trim()) continue;

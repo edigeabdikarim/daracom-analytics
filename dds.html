@@ -333,11 +333,13 @@ const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','
 // ─── BALANCE SUMMARY ──────────────────────────────────
 function loadBalanceSummary() {
   const cacheKey = 'dds_balance_cache';
+  // Версия логики — при смене сбрасываем кэш
+  const BALANCE_VERSION = 'v2-all-activities';
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
-      const { ts, data } = JSON.parse(cached);
-      if (Date.now() - ts < CACHE_TTL_MS) {
+      const { ts, data, ver } = JSON.parse(cached);
+      if (ver === BALANCE_VERSION && Date.now() - ts < CACHE_TTL_MS) {
         monthlyBalance = data;
         return;
       }
@@ -349,7 +351,7 @@ function loadBalanceSummary() {
     .then(resp => {
       if (!resp.ok) return;
       monthlyBalance = resp.data;
-      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: resp.data }));
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: resp.data, ver: BALANCE_VERSION }));
       // Если контент уже отображён — перерисовать KPI с остатками
       if (document.getElementById('stateContent').style.display !== 'none' &&
           !document.getElementById('stateContent').classList.contains('hidden')) {
