@@ -799,7 +799,7 @@ function renderStoreGrid() {
   grid.innerHTML = stores.map(([name, d]) => {
     const cf = d.inc - d.out;
     const cfColor = cf >= 0 ? '#10B981' : '#EF4444';
-    return `<div class="store-card" onclick="openDrillStore('${escAttr(name)}')">
+    return `<div class="store-card" data-store="${escHtml(name)}" onclick="openDrillStore(this.dataset.store)">
       <div class="store-name">${escHtml(shortStoreName(name))}</div>
       <div class="store-row"><span class="store-row-label">Поступления</span><span class="store-row-val" style="color:#10B981">${fmt(d.inc)}</span></div>
       <div class="store-row"><span class="store-row-label">Выбытия</span><span class="store-row-val" style="color:#EF4444">${fmt(d.out)}</span></div>
