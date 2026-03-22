@@ -85,3 +85,56 @@ function parseNumDDS(v) {
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
+
+/**
+ * Возвращает суммарные поступления и выбытия по каждому месяцу
+ * (исключая Технические операции)
+ * Формат: { "1": { incoming: N, outgoing: N }, "2": {...}, ... }
+ */
+function getDDSBalanceSummary() {
+  const ss = SpreadsheetApp.openById(DDS_SHEET_ID);
+  const sheet = ss.getSheetByName('ДДС: месяц');
+  if (!sheet) throw new Error('Лист "ДДС: месяц" не найден');
+
+  const allRows = sheet.getDataRange().getValues();
+
+  let headerIdx = 2;
+  for (let i = 0; i < Math.min(6, allRows.length); i++) {
+    const c2 = String(allRows[i][2]);
+    if (c2.includes('цифрой') || c2 === 'Мсц (цифрой)') { headerIdx = i; break; }
+    if (String(allRows[i][0]) === 'Месяц' && String(allRows[i][1]) === 'Год') { headerIdx = i; break; }
+  }
+
+  const monthly = {};
+  for (let i = headerIdx + 1; i < allRows.length; i++) {
+    const r = allRows[i];
+    const msc = parseInt(r[2]);
+    if (isNaN(msc) || msc < 1 || msc > 12) continue;
+    const activity = String(r[14]).trim();
+    if (activity === 'Техническая операция') continue;
+    const type = String(r[12]).trim();
+    const amount = parseNumDDS(r[4]);
+    if (amount === 0 && !String(r[3]).trim()) continue;
+    if (!monthly[msc]) monthly[msc] = { incoming: 0, outgoing: 0 };
+    if (type === 'Поступление') monthly[msc].incoming += amount;
+    if (type === 'Выбытие')     monthly[msc].outgoing += Math.abs(amount);
+  }
+
+  return monthly;
+}
+
+/**
+ * Endpoint: ?action=dds_balance
+ */
+function doGetDDSBalance() {
+  try {
+    const summary = getDDSBalanceSummary();
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true, data: summary }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}

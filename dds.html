@@ -53,13 +53,15 @@
     .filter-select:focus { border-color: #10B981; }
 
     /* KPI cards */
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
     .kpi-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; }
     .kpi-label { font-size: 12px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
     .kpi-value { font-size: 22px; font-weight: 800; color: #111827; }
     .kpi-green .kpi-value { color: #10B981; }
     .kpi-red .kpi-value { color: #EF4444; }
     .kpi-blue .kpi-value { color: #3B82F6; }
+    .kpi-val-balance { color: #8B5CF6; }
+    .kpi-val-balance.bal-neg { color: #EF4444; }
 
     /* Section */
     .section { display: none; }
@@ -133,6 +135,7 @@
   // Формат запроса: DDS_GAS_URL + '?action=dds&month=' + N
   const DDS_GAS_URL = 'https://script.google.com/macros/s/AKfycbys3hHPuyBSce--cqASzZG5lf7Dj1M7qrARMLQagHFj-eK65WmxsvUFVYcy9Z3eh1meag/exec';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 минут
+  const OPENING_BALANCE_2026 = 35492540; // Остаток на начало 2026 года
 </script>
 
 <!-- ═══════════ TOPBAR ═══════════ -->
@@ -310,6 +313,7 @@ let currentMonth = new Date().getMonth() + 1;
 let articleSortMode = 'amount';
 let chartTop5Instance = null;
 let chartDaysInstance = null;
+let monthlyBalance = null; // { "1": { incoming, outgoing }, ... } — данные по всем месяцам
 
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                      'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -322,8 +326,50 @@ const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','
     currentMonth = parseInt(sel.value);
     loadData();
   });
+  loadBalanceSummary();
   loadData();
 })();
+
+// ─── BALANCE SUMMARY ──────────────────────────────────
+function loadBalanceSummary() {
+  const cacheKey = 'dds_balance_cache';
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const { ts, data } = JSON.parse(cached);
+      if (Date.now() - ts < CACHE_TTL_MS) {
+        monthlyBalance = data;
+        return;
+      }
+    }
+  } catch(e) { /* ignore */ }
+
+  fetch(DDS_GAS_URL + '?action=dds_balance')
+    .then(r => r.json())
+    .then(resp => {
+      if (!resp.ok) return;
+      monthlyBalance = resp.data;
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: resp.data }));
+      // Если контент уже отображён — перерисовать KPI с остатками
+      if (document.getElementById('stateContent').style.display !== 'none' &&
+          !document.getElementById('stateContent').classList.contains('hidden')) {
+        renderKPI();
+      }
+    })
+    .catch(() => { /* баланс не критичен */ });
+}
+
+// Вычисляет остаток на начало и конец указанного месяца
+function calcBalance(month) {
+  let balanceStart = OPENING_BALANCE_2026;
+  for (let m = 1; m < month; m++) {
+    const mb = monthlyBalance && monthlyBalance[m];
+    if (mb) balanceStart += mb.incoming - mb.outgoing;
+  }
+  const curMonth = monthlyBalance && monthlyBalance[month];
+  const balanceEnd = balanceStart + (curMonth ? curMonth.incoming - curMonth.outgoing : 0);
+  return { balanceStart, balanceEnd };
+}
 
 // ─── DATA LOADING ─────────────────────────────────────
 function loadData() {
@@ -433,7 +479,21 @@ function calcKPI(rows) {
 function renderKPI() {
   const { incoming, outgoing, netCF, opExpenses } = calcKPI(filteredRows);
   const cfClass = netCF >= 0 ? 'kpi-green' : 'kpi-red';
+
+  // Остатки — если данные по всем месяцам ещё не загружены, показываем прочерк
+  let balanceStartHtml = monthlyBalance
+    ? `<div class="kpi-value kpi-val-balance">${fmt(calcBalance(currentMonth).balanceStart)}</div>`
+    : `<div class="kpi-value" style="color:#9CA3AF;font-size:16px">Загрузка…</div>`;
+  let balanceEndHtml = monthlyBalance
+    ? `<div class="kpi-value kpi-val-balance ${calcBalance(currentMonth).balanceEnd >= 0 ? 'bal-pos' : 'bal-neg'}">${fmt(calcBalance(currentMonth).balanceEnd)}</div>`
+    : `<div class="kpi-value" style="color:#9CA3AF;font-size:16px">Загрузка…</div>`;
+
   document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card" style="border-left: 3px solid #8B5CF6;">
+      <div class="kpi-label">Остаток на начало месяца</div>
+      ${balanceStartHtml}
+      <div style="font-size:11px;color:#9CA3AF;margin-top:6px">по всем кошелькам</div>
+    </div>
     <div class="kpi-card kpi-green">
       <div class="kpi-label">Поступления</div>
       <div class="kpi-value">${fmt(incoming)}</div>
@@ -441,6 +501,11 @@ function renderKPI() {
     <div class="kpi-card kpi-red">
       <div class="kpi-label">Выбытия</div>
       <div class="kpi-value">${fmt(outgoing)}</div>
+    </div>
+    <div class="kpi-card" style="border-left: 3px solid #8B5CF6;">
+      <div class="kpi-label">Остаток на конец месяца</div>
+      ${balanceEndHtml}
+      <div style="font-size:11px;color:#9CA3AF;margin-top:6px">по всем кошелькам</div>
     </div>
     <div class="kpi-card ${cfClass}">
       <div class="kpi-label">Чистый Cash Flow</div>

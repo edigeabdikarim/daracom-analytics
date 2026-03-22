@@ -26,6 +26,10 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'dds') {
     return doGetDDS(e);
   }
+  // Роутинг: ?action=dds_balance → суммы по месяцам для расчёта остатков
+  if (e && e.parameter && e.parameter.action === 'dds_balance') {
+    return doGetDDSBalance();
+  }
 
   const headers = {
     'Access-Control-Allow-Origin': '*',
