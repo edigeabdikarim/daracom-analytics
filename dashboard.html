@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Финансовый отчёт · Daracom</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0F1117',
+            surface: '#1A1D27',
+            surface2: '#222535',
+            border: '#2A2E3F',
+            accent: '#10B981',
+            accentDim: '#059669',
+            muted: '#6B7280',
+            danger: '#EF4444',
+            warning: '#F59E0B',
+          },
+          fontFamily: { sans: ['Manrope', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #0F1117; color: #E5E7EB; font-family: 'Manrope', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1A1D27; }
+    ::-webkit-scrollbar-thumb { background: #2A2E3F; border-radius: 3px; }
+    .kpi-up { color: #10B981; }
+    .kpi-down { color: #EF4444; }
+    .kpi-neutral { color: #6B7280; }
+    .chart-container { position: relative; }
+    .badge-green { background: rgba(16,185,129,0.15); color: #10B981; }
+    .badge-yellow { background: rgba(245,158,11,0.15); color: #F59E0B; }
+    .badge-red { background: rgba(239,68,68,0.15); color: #EF4444; }
+    select option { background: #1A1D27; color: #E5E7EB; }
+    .loader { border: 3px solid #2A2E3F; border-top-color: #10B981; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    table thead th { position: sticky; top: 0; z-index: 1; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- ═══════════════════ КОНФИГУРАЦИЯ ═══════════════════ -->
+  <script>
+    const CONFIG = {
+      // Вставь URL задеплоенного GAS скрипта (gas/dashboard.gs)
+      GAS_URL:      'YOUR_GAS_WEB_APP_URL_HERE',
+      CACHE_TTL_MS: 30 * 60 * 1000, // 30 минут
+    };
+  </script>
+
+  <!-- ═══════════════════ HEADER ═══════════════════ -->
+  <header class="sticky top-0 z-20 bg-surface border-b border-border px-6 py-4 flex items-center justify-between shadow-lg">
+    <div>
+      <h1 class="text-lg font-bold text-white tracking-tight">Финансовый отчёт · Daracom</h1>
+      <p class="text-xs text-muted mt-0.5" id="headerSubtitle">Загрузка данных…</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select id="monthSel" class="bg-surface2 border border-border text-white text-sm rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-accent cursor-pointer">
+        <option value="1">Январь</option>
+        <option value="2">Февраль</option>
+        <option value="3">Март</option>
+        <option value="4">Апрель</option>
+        <option value="5">Май</option>
+        <option value="6">Июнь</option>
+        <option value="7">Июль</option>
+        <option value="8">Август</option>
+        <option value="9">Сентябрь</option>
+        <option value="10">Октябрь</option>
+        <option value="11">Ноябрь</option>
+        <option value="12">Декабрь</option>
+      </select>
+      <button id="refreshBtn" onclick="loadData(true)" class="bg-accent hover:bg-accentDim text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+        Обновить
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════ LOADER ═══════════════════ -->
+  <div id="loadingState" class="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+    <div class="loader"></div>
+    <p class="text-muted text-sm" id="loadingMsg">Загрузка данных из Google Sheets…</p>
+  </div>
+
+  <!-- ═══════════════════ ERROR ═══════════════════ -->
+  <div id="errorState" class="hidden flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
+    <div class="text-4xl">⚠️</div>
+    <h2 class="text-lg font-bold text-white">Ошибка загрузки данных</h2>
+    <p class="text-muted text-sm text-center max-w-md" id="errorMsg"></p>
+    <div class="bg-surface2 border border-border rounded-lg p-4 text-xs text-muted max-w-md">
+      <p class="font-semibold text-white mb-2">Проверь конфигурацию:</p>
+      <ol class="list-decimal list-inside space-y-1">
+        <li>Открой <code class="text-accent">gas/dashboard.gs</code> в Google Apps Script</li>
+        <li>Задеплой как Web App (Execute as: Me, Access: Anyone)</li>
+        <li>Скопируй URL деплоя и вставь в <code class="text-accent">CONFIG.GAS_URL</code> в этом файле</li>
+      </ol>
+    </div>
+    <button onclick="loadData(true)" class="bg-accent hover:bg-accentDim text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+      Попробовать снова
+    </button>
+  </div>
+
+  <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+  <main id="dashboard" class="hidden px-6 py-6 space-y-6 max-w-screen-2xl mx-auto">
+
+    <!-- Блок 1: KPI карточки -->
+    <div id="kpiGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+
+    <!-- Блок 2 + 3: Выручка по магазинам + Топ расходов -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="bg-surface rounded-xl border border-border p-5">
+        <h2 class="text-sm font-semibold text-white mb-4">Выручка по магазинам</h2>
+        <div class="chart-container" style="height: 280px;">
+          <canvas id="revenueChart"></canvas>
+        </div>
+      </div>
+      <div class="bg-surface rounded-xl border border-border p-5">
+        <h2 class="text-sm font-semibold text-white mb-4">Структура расходов</h2>
+        <div class="chart-container" style="height: 280px;">
+          <canvas id="expensesBarChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Блок 4: Динамика по месяцам -->
+    <div class="bg-surface rounded-xl border border-border p-5">
+      <h2 class="text-sm font-semibold text-white mb-4">Динамика выручки и прибыли</h2>
+      <div class="chart-container" style="height: 260px;">
+        <canvas id="dynamicsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Блок 5 + 6: Donut + Сводная таблица -->
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
+      <div class="xl:col-span-2 bg-surface rounded-xl border border-border p-5">
+        <h2 class="text-sm font-semibold text-white mb-4">Куда уходят деньги</h2>
+        <div class="chart-container" style="height: 280px;">
+          <canvas id="donutChart"></canvas>
+        </div>
+      </div>
+      <div class="xl:col-span-3 bg-surface rounded-xl border border-border p-5 overflow-x-auto">
+        <h2 class="text-sm font-semibold text-white mb-4">Сводка по магазинам</h2>
+        <table class="w-full text-xs" id="summaryTable">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="text-left py-2 pr-4 text-muted font-semibold bg-surface">Магазин</th>
+              <th class="text-right py-2 px-2 text-muted font-semibold bg-surface">Выручка</th>
+              <th class="text-right py-2 px-2 text-muted font-semibold bg-surface">Перем. расх.</th>
+              <th class="text-right py-2 px-2 text-muted font-semibold bg-surface">Маржин. доход</th>
+              <th class="text-right py-2 px-2 text-muted font-semibold bg-surface">Маржа%</th>
+              <th class="text-right py-2 px-2 text-muted font-semibold bg-surface">Пост. расх.</th>
+              <th class="text-right py-2 px-2 text-muted font-semibold bg-surface">Вал. прибыль</th>
+              <th class="text-right py-2 px-2 text-muted font-semibold bg-surface">Вал. маржа%</th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════ СКРИПТ ═══════════════════ -->
+  <script>
+
+  // ─── КОНСТАНТЫ ────────────────────────────────────────────
+  const MONTH_NAMES = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
+                        'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const STORES = ['Магазин Астана','Магазин Above Астана','Магазин Мира',
+                  'Магазин Есентай','Магазин Абайка','Магазин Above',
+                  'Магазин Восход','Магазин Kaspi'];
+  const EXPENSE_GROUPS = ['Закупка товара','Зарплаты','Аренда','Маркетинг','Налоги','Логистика','Прочие'];
+  const CHART_COLORS = {
+    accent: '#10B981', blue: '#3B82F6', orange: '#F97316',
+    purple: '#8B5CF6', yellow: '#F59E0B', red: '#EF4444', muted: '#6B7280',
+  };
+  const EXPENSE_PALETTE = ['#10B981','#3B82F6','#F97316','#8B5CF6','#F59E0B','#EF4444','#6B7280'];
+
+  // ─── СОСТОЯНИЕ ────────────────────────────────────────────
+  let CHARTS = {};
+  let currentData = null;
+
+  // ─── ФОРМАТИРОВАНИЕ ───────────────────────────────────────
+  function parseNum(v) {
+    if (v === null || v === undefined || v === '' || v === '—') return 0;
+    if (typeof v === 'number') return v;
+    return parseFloat(String(v).replace(/[\s ]/g, '').replace(',', '.')) || 0;
+  }
+
+  function fmoney(n, short = false) {
+    n = parseNum(n);
+    if (short) {
+      const abs = Math.abs(n);
+      if (abs >= 1e9) return (n/1e9).toFixed(1) + ' млрд ₸';
+      if (abs >= 1e6) return (n/1e6).toFixed(1) + ' млн ₸';
+      if (abs >= 1e3) return (n/1e3).toFixed(0) + ' тыс ₸';
+      return n.toFixed(0) + ' ₸';
+    }
+    return n.toLocaleString('ru-RU', {maximumFractionDigits: 0}) + ' ₸';
+  }
+
+  function fpct(n) {
+    n = parseNum(n);
+    return (n * 100).toFixed(1) + '%';
+  }
+
+  function fpctDirect(n) {
+    n = parseNum(n);
+    return n.toFixed(1) + '%';
+  }
+
+  function fchange(curr, prev) {
+    curr = parseNum(curr); prev = parseNum(prev);
+    if (!prev) return { text: '—', cls: 'kpi-neutral' };
+    const pct = ((curr - prev) / Math.abs(prev)) * 100;
+    const icon = pct >= 0 ? '▲' : '▼';
+    return { text: `${icon} ${Math.abs(pct).toFixed(1)}%`, cls: pct >= 0 ? 'kpi-up' : 'kpi-down' };
+  }
+
+  // ─── КЭШИРОВАНИЕ ─────────────────────────────────────────
+  function cacheKey(month) { return `daracom_dash_${month}`; }
+
+  function loadFromCache(month) {
+    try {
+      const raw = localStorage.getItem(cacheKey(month));
+      if (!raw) return null;
+      const { ts, data } = JSON.parse(raw);
+      if (Date.now() - ts < CONFIG.CACHE_TTL_MS) return data;
+    } catch(e) {}
+    return null;
+  }
+
+  function saveToCache(month, data) {
+    try {
+      localStorage.setItem(cacheKey(month), JSON.stringify({ ts: Date.now(), data }));
+    } catch(e) {}
+  }
+
+  // ─── FETCH DATA (через GAS endpoint) ────────────────────
+  async function fetchDashboardData(month, forceRefresh = false) {
+    if (!forceRefresh) {
+      const cached = loadFromCache(month);
+      if (cached) { console.log('[Cache] Данные из кэша'); return cached; }
+    }
+
+    if (!CONFIG.GAS_URL || CONFIG.GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+      throw new Error('Вставь URL задеплоенного GAS скрипта в CONFIG.GAS_URL вверху файла');
+    }
+
+    const url = `${CONFIG.GAS_URL}?month=${month}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Ошибка на стороне GAS');
+
+    saveToCache(month, json.data);
+    return json.data;
+  }
+
+  // ─── РЕНДЕР KPI ───────────────────────────────────────────
+  function renderKPIs(curr, prev) {
+    const c = curr.current;
+    const p = prev?.current || prev;
+
+    const kpis = [
+      {
+        label: 'Выручка', icon: '💰',
+        value: fmoney(c.revenue.total, true),
+        raw: c.revenue.total,
+        prevRaw: p?.revenue?.total,
+        color: 'border-blue-500',
+      },
+      {
+        label: 'Маржинальный доход', icon: '📈',
+        value: fmoney(c.marginalProfit.total, true),
+        sub: fpctDirect(c.marginalProfit.pct * 100) + ' маржа',
+        raw: c.marginalProfit.total,
+        prevRaw: p?.marginalProfit?.total,
+        color: 'border-accent',
+      },
+      {
+        label: 'Валовая прибыль', icon: '✅',
+        value: fmoney(c.grossProfit.total, true),
+        sub: fpctDirect(c.grossProfit.pct * 100) + ' маржа',
+        raw: c.grossProfit.total,
+        prevRaw: p?.grossProfit?.total,
+        color: 'border-green-400',
+      },
+      {
+        label: 'Общие расходы', icon: '💸',
+        value: fmoney(c.totalExpenses, true),
+        raw: c.totalExpenses,
+        prevRaw: p?.totalExpenses,
+        color: 'border-red-500',
+        invertChange: true,
+      },
+    ];
+
+    const grid = document.getElementById('kpiGrid');
+    grid.innerHTML = kpis.map(k => {
+      const ch = fchange(k.raw, k.prevRaw);
+      // Для расходов: рост — плохо (красный), снижение — хорошо (зелёный)
+      let chCls = ch.cls;
+      if (k.invertChange) chCls = ch.cls === 'kpi-up' ? 'kpi-down' : (ch.cls === 'kpi-down' ? 'kpi-up' : ch.cls);
+
+      return `
+        <div class="bg-surface rounded-xl border border-border border-l-4 ${k.color} p-5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-muted text-xs font-semibold uppercase tracking-wider">${k.label}</span>
+            <span class="text-xl">${k.icon}</span>
+          </div>
+          <div class="text-2xl font-bold text-white">${k.value}</div>
+          ${k.sub ? `<div class="text-xs text-muted">${k.sub}</div>` : ''}
+          <div class="text-xs font-semibold ${chCls}">${ch.text} к прошлому месяцу</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ─── РЕНДЕР ВЫРУЧКА ПО МАГАЗИНАМ ─────────────────────────
+  function renderRevenueByStore(data) {
+    const stores = data.current.revenue.stores;
+    const margPct = data.current.marginalPct?.stores || {};
+
+    const entries = STORES.map(s => ({
+      name: s.replace('Магазин ', ''),
+      revenue: stores[s] || 0,
+      pct: (margPct[s] || 0) * 100,
+    })).filter(e => e.revenue !== 0).sort((a, b) => b.revenue - a.revenue);
+
+    const labels = entries.map(e => e.name);
+    const values = entries.map(e => e.revenue);
+    const bgColors = entries.map(e => {
+      if (e.pct > 20) return 'rgba(16,185,129,0.7)';
+      if (e.pct >= 10) return 'rgba(245,158,11,0.7)';
+      return 'rgba(239,68,68,0.7)';
+    });
+
+    destroyChart('revenueChart');
+    CHARTS.revenueChart = new Chart(document.getElementById('revenueChart'), {
+      type: 'bar',
+      data: { labels, datasets: [{ data: values, backgroundColor: bgColors, borderRadius: 4, borderSkipped: false }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `  ${fmoney(ctx.raw)}  (маржа: ${fpctDirect(entries[ctx.dataIndex].pct)})`
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#6B7280', font: {size:10}, callback: v => fmoney(v/1e6, false).replace(' ₸','') + ' млн' }, grid: { color: '#2A2E3F' } },
+          y: { ticks: { color: '#E5E7EB', font: {size:11} }, grid: { display: false } },
+        }
+      }
+    });
+  }
+
+  // ─── РЕНДЕР ТОП РАСХОДОВ (БАР) ───────────────────────────
+  function renderExpensesBar(data) {
+    const groups = data.current.expensesByGroup;
+    const total = Object.values(groups).reduce((s, v) => s + Math.abs(v), 0);
+
+    const entries = EXPENSE_GROUPS.map((g, i) => ({
+      name: g, value: Math.abs(groups[g] || 0), color: EXPENSE_PALETTE[i]
+    })).sort((a, b) => b.value - a.value);
+
+    destroyChart('expensesBarChart');
+    CHARTS.expensesBarChart = new Chart(document.getElementById('expensesBarChart'), {
+      type: 'bar',
+      data: {
+        labels: entries.map(e => e.name),
+        datasets: [{ data: entries.map(e => e.value), backgroundColor: entries.map(e => e.color + 'B3'), borderRadius: 4, borderSkipped: false }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const pct = total > 0 ? (ctx.raw / total * 100).toFixed(1) : 0;
+                return `  ${fmoney(ctx.raw)}  (${pct}%)`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#6B7280', font: {size:10}, callback: v => (v/1e6).toFixed(0) + ' млн' }, grid: { color: '#2A2E3F' } },
+          y: { ticks: { color: '#E5E7EB', font: {size:11} }, grid: { display: false } },
+        }
+      }
+    });
+  }
+
+  // ─── РЕНДЕР ДИНАМИКА ─────────────────────────────────────
+  function renderDynamics(data) {
+    const dyn = data.dynamics;
+    const activeMonths = dyn.months.filter((m, i) => dyn.revenue[i] > 0);
+    const n = activeMonths.length || dyn.months.length;
+
+    const labels = dyn.months.slice(0, n).map(m => MONTH_NAMES[m] || m);
+    const rev  = dyn.revenue.slice(0, n);
+    const marg = dyn.marginalProfit.slice(0, n);
+    const gross = dyn.grossProfit.slice(0, n);
+
+    destroyChart('dynamicsChart');
+    CHARTS.dynamicsChart = new Chart(document.getElementById('dynamicsChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Выручка', data: rev, borderColor: CHART_COLORS.blue, backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.4, fill: true, pointRadius: 4 },
+          { label: 'Маржинальный доход', data: marg, borderColor: CHART_COLORS.accent, backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.4, fill: true, pointRadius: 4 },
+          { label: 'Валовая прибыль', data: gross, borderColor: CHART_COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', tension: 0.4, fill: true, pointRadius: 4 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#9CA3AF', font: {size:11}, boxWidth: 12, boxHeight: 12 } },
+          tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${fmoney(ctx.raw, true)}` } }
+        },
+        scales: {
+          x: { ticks: { color: '#6B7280', font: {size:10} }, grid: { color: '#1A1D27' } },
+          y: { ticks: { color: '#6B7280', font: {size:10}, callback: v => (v/1e6).toFixed(0) + ' млн' }, grid: { color: '#2A2E3F' } },
+        }
+      }
+    });
+  }
+
+  // ─── РЕНДЕР DONUT ─────────────────────────────────────────
+  function renderDonut(data) {
+    const groups = data.current.expensesByGroup;
+    const labels = EXPENSE_GROUPS;
+    const values = labels.map(g => Math.abs(groups[g] || 0));
+    const total = values.reduce((s, v) => s + v, 0);
+
+    destroyChart('donutChart');
+    CHARTS.donutChart = new Chart(document.getElementById('donutChart'), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data: values, backgroundColor: EXPENSE_PALETTE, borderColor: '#1A1D27', borderWidth: 2, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: {
+          legend: { position: 'right', labels: { color: '#9CA3AF', font: {size:10}, boxWidth: 10, boxHeight: 10, padding: 8 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const pct = total > 0 ? (ctx.raw / total * 100).toFixed(1) : 0;
+                return `  ${fmoney(ctx.raw, true)} (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ─── РЕНДЕР СВОДНАЯ ТАБЛИЦА ───────────────────────────────
+  function renderSummaryTable(data) {
+    const c = data.current;
+    const body = document.getElementById('summaryBody');
+
+    const rows = STORES.map(store => {
+      const rev  = c.revenue?.stores?.[store] || 0;
+      const varE = Math.abs(c.variableExpenses?.stores?.[store] || 0);
+      const marg = c.marginalProfit?.stores?.[store] || 0;
+      const margP = (c.marginalPct?.stores?.[store] || 0) * 100;
+      const fixE = Math.abs(c.fixedExpenses?.stores?.[store] || 0);
+      const gross = c.grossProfit?.stores?.[store] || 0;
+      const grossP = rev > 0 ? (gross / rev * 100) : 0;
+
+      if (rev === 0 && marg === 0 && gross === 0) return null;
+
+      const mpBadge = margP > 20 ? 'badge-green' : margP >= 10 ? 'badge-yellow' : 'badge-red';
+      const gpBadge = grossP > 10 ? 'badge-green' : grossP >= 5 ? 'badge-yellow' : 'badge-red';
+
+      return `
+        <tr class="border-b border-border hover:bg-surface2 transition-colors">
+          <td class="py-2.5 pr-4 font-medium text-white whitespace-nowrap">${store.replace('Магазин ', '')}</td>
+          <td class="py-2.5 px-2 text-right text-gray-300">${fmoney(rev, true)}</td>
+          <td class="py-2.5 px-2 text-right text-red-400">${fmoney(-varE, true)}</td>
+          <td class="py-2.5 px-2 text-right text-accent">${fmoney(marg, true)}</td>
+          <td class="py-2.5 px-2 text-right"><span class="px-1.5 py-0.5 rounded text-xs font-semibold ${mpBadge}">${fpctDirect(margP)}</span></td>
+          <td class="py-2.5 px-2 text-right text-red-400">${fmoney(-fixE, true)}</td>
+          <td class="py-2.5 px-2 text-right ${gross >= 0 ? 'text-accent' : 'text-red-400'}">${fmoney(gross, true)}</td>
+          <td class="py-2.5 px-2 text-right"><span class="px-1.5 py-0.5 rounded text-xs font-semibold ${gpBadge}">${fpctDirect(grossP)}</span></td>
+        </tr>`;
+    }).filter(Boolean);
+
+    body.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="8" class="py-6 text-center text-muted">Нет данных</td></tr>`;
+  }
+
+  // ─── ВСПОМОГАТЕЛЬНЫЕ ─────────────────────────────────────
+  function destroyChart(id) {
+    if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; }
+  }
+
+  function showLoader(msg = 'Загрузка данных из Google Sheets…') {
+    document.getElementById('loadingMsg').textContent = msg;
+    document.getElementById('loadingState').classList.remove('hidden');
+    document.getElementById('loadingState').classList.add('flex');
+    document.getElementById('errorState').classList.add('hidden');
+    document.getElementById('errorState').classList.remove('flex');
+    document.getElementById('dashboard').classList.add('hidden');
+  }
+
+  function showError(msg) {
+    document.getElementById('errorMsg').textContent = msg;
+    document.getElementById('errorState').classList.remove('hidden');
+    document.getElementById('errorState').classList.add('flex');
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('loadingState').classList.remove('flex');
+    document.getElementById('dashboard').classList.add('hidden');
+  }
+
+  function showDashboard() {
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('loadingState').classList.remove('flex');
+    document.getElementById('errorState').classList.add('hidden');
+    document.getElementById('errorState').classList.remove('flex');
+  }
+
+  // ─── ГЛАВНАЯ ФУНКЦИЯ ─────────────────────────────────────
+  async function loadData(forceRefresh = false) {
+    const month = parseInt(document.getElementById('monthSel').value);
+    showLoader(`Загрузка данных за ${MONTH_NAMES[month]} 2026…`);
+
+    try {
+      const data = await fetchDashboardData(month, forceRefresh);
+      currentData = data;
+
+      // Заголовок
+      document.getElementById('headerSubtitle').textContent =
+        `${MONTH_NAMES[month]} 2026 · Обновлено: ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
+
+      // Рендер блоков
+      renderKPIs(data, data.previous ? { current: data.previous } : null);
+      renderRevenueByStore(data);
+      renderExpensesBar(data);
+      renderDynamics(data);
+      renderDonut(data);
+      renderSummaryTable(data);
+
+      showDashboard();
+    } catch(err) {
+      console.error('[Dashboard Error]', err);
+      showError(err.message || 'Неизвестная ошибка');
+    }
+  }
+
+  // ─── ИНИЦИАЛИЗАЦИЯ ────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    // Установить текущий месяц по умолчанию (но не больше 12)
+    const curMonth = Math.min(new Date().getMonth() + 1, 12);
+    document.getElementById('monthSel').value = curMonth;
+
+    // Слушатель смены месяца
+    document.getElementById('monthSel').addEventListener('change', () => loadData(false));
+
+    // Первая загрузка
+    loadData(false);
+  });
+
+  </script>
+</body>
+</html>

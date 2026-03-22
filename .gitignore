@@ -1,0 +1,10 @@
+# Системные файлы
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Заметки с секретами (не коммитить)
+Ссылки на таблицы.txt
+Promt.md
+*.local.*
+secrets.*
