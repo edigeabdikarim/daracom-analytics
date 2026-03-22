@@ -77,16 +77,6 @@
     .data-table td { padding: 10px 12px; border-bottom: 1px solid #F3F4F6; color: #374151; }
     .data-table tr:last-child td { border-bottom: none; }
 
-    /* Article list item */
-    .article-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F3F4F6; cursor: pointer; transition: background 0.1s; }
-    .article-item:hover { background: #F9FAFB; }
-    .article-item:last-child { border-bottom: none; }
-    .article-name { flex: 1; font-size: 14px; font-weight: 500; color: #374151; }
-    .article-pct { font-size: 12px; color: #9CA3AF; margin: 0 12px; }
-    .article-amount { font-size: 14px; font-weight: 700; color: #EF4444; }
-    .article-bar-wrap { width: 80px; height: 4px; background: #F3F4F6; border-radius: 2px; margin: 0 12px; }
-    .article-bar { height: 4px; background: #EF4444; border-radius: 2px; }
-
     /* Store grid */
     .store-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .store-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; cursor: pointer; transition: box-shadow 0.15s; }
@@ -127,29 +117,48 @@
     }
 
     /* ─── Tooltip ─── */
-    .art-tooltip { position: fixed; z-index: 200; background: #1F2937; color: #F9FAFB; border-radius: 10px; padding: 12px 16px; font-size: 12px; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.25); min-width: 200px; max-width: 290px; }
+    .art-tooltip { position: fixed; z-index: 200; background: #1F2937; color: #F9FAFB; border-radius: 10px; padding: 12px 16px; font-size: 12px; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.25); min-width: 200px; max-width: 260px; }
     .art-tooltip-title { font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
     .art-tooltip-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 2px 0; }
     .art-tooltip-store { color: #D1D5DB; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .art-tooltip-amt { font-weight: 700; font-size: 12px; white-space: nowrap; }
     .art-tooltip-amt.income { color: #34D399; }
     .art-tooltip-amt.expense { color: #F87171; }
+    .art-tooltip-bar-wrap { width: 44px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; flex-shrink: 0; }
+    .art-tooltip-bar-fill { height: 3px; border-radius: 2px; }
+    .art-tooltip-divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 9px 0; }
 
-    /* ─── Article groups ─── */
-    .article-group-hdr { padding: 7px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #E5E7EB; }
-    .article-group-hdr.income { color: #059669; background: #F0FDF4; }
-    .article-group-hdr.expense { color: #B91C1C; background: #FEF2F2; }
-    .expand-chevron { font-size: 10px; color: #9CA3AF; margin-left: 8px; transition: transform 0.2s; display: inline-block; flex-shrink: 0; }
-    .article-item.is-expanded .expand-chevron { transform: rotate(90deg); }
-    .article-expand-body { background: #F9FAFB; border-bottom: 1px solid #E5E7EB; padding: 16px 20px; display: none; }
-    .article-expand-body.open { display: block; }
-
-    /* ─── Mini month chart ─── */
-    .mini-bars { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
-    .mini-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
-    .mini-bar-fill { width: 100%; border-radius: 2px 2px 0 0; }
-    .mini-bar-lbl { font-size: 9px; color: #9CA3AF; text-align: center; }
-    .mini-bar-val { font-size: 9px; color: #6B7280; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+    /* ─── Articles table (replaces expandable list) ─── */
+    .art-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .art-tbl thead tr { background: #F9FAFB; }
+    .art-tbl th { padding: 8px 14px; text-align: left; font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: .05em; border-bottom: 2px solid #E5E7EB; }
+    .art-tbl th.r { text-align: right; }
+    .art-tbl td { padding: 10px 14px; border-bottom: 1px solid #F3F4F6; vertical-align: middle; }
+    .art-tbl tr.art-row:hover td { background: #F3F4FF; cursor: default; }
+    .art-tbl tr:last-child td { border-bottom: none; }
+    .art-tbl-grp td { padding: 6px 14px; }
+    .art-tbl-grp.income td { background: #F0FDF4; }
+    .art-tbl-grp.expense td { background: #FEF2F2; }
+    .art-tbl-grp-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+    .art-tbl-grp.income .art-tbl-grp-label { color: #059669; }
+    .art-tbl-grp.expense .art-tbl-grp-label { color: #B91C1C; }
+    .art-tbl-grp-total { font-size: 12px; font-weight: 700; margin-left: 10px; }
+    .art-tbl-grp.income .art-tbl-grp-total { color: #059669; }
+    .art-tbl-grp.expense .art-tbl-grp-total { color: #B91C1C; }
+    .art-tbl-name { font-size: 13px; font-weight: 500; color: #374151; }
+    .art-tbl-dirs { display: flex; gap: 4px; flex-wrap: wrap; }
+    .art-tbl-dir { font-size: 10px; color: #4B5563; background: #F3F4F6; border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+    .art-tbl-bar-cell { width: 110px; }
+    .art-tbl-bar-bg { height: 6px; background: #F3F4F6; border-radius: 3px; }
+    .art-tbl-bar-e { height: 6px; border-radius: 3px; background: linear-gradient(90deg, #EF4444, #F97316); }
+    .art-tbl-bar-i { height: 6px; border-radius: 3px; background: linear-gradient(90deg, #10B981, #34D399); }
+    .art-tbl-amt-e { font-size: 13px; font-weight: 700; color: #EF4444; text-align: right; white-space: nowrap; }
+    .art-tbl-amt-i { font-size: 13px; font-weight: 700; color: #10B981; text-align: right; white-space: nowrap; }
+    .art-tbl-pct { text-align: right; white-space: nowrap; }
+    .art-tbl-pct-main { font-size: 12px; font-weight: 700; color: #374151; display: block; }
+    .art-tbl-pct-main.income { color: #10B981; }
+    .art-tbl-pct-sub { font-size: 10px; color: #9CA3AF; display: block; margin-top: 1px; }
+    .art-tbl-pct-sub span { color: #6B7280; font-weight: 600; }
 
     /* ─── Matrix table ─── */
     .matrix-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
