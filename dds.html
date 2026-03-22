@@ -125,6 +125,49 @@
       .sidebar.mobile-open { display: flex; }
       #hamburger { display: flex !important; }
     }
+
+    /* ─── Tooltip ─── */
+    .art-tooltip { position: fixed; z-index: 200; background: #1F2937; color: #F9FAFB; border-radius: 10px; padding: 12px 16px; font-size: 12px; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.25); min-width: 200px; max-width: 290px; }
+    .art-tooltip-title { font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .art-tooltip-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 2px 0; }
+    .art-tooltip-store { color: #D1D5DB; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .art-tooltip-amt { font-weight: 700; font-size: 12px; white-space: nowrap; }
+    .art-tooltip-amt.income { color: #34D399; }
+    .art-tooltip-amt.expense { color: #F87171; }
+
+    /* ─── Article groups ─── */
+    .article-group-hdr { padding: 7px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #E5E7EB; }
+    .article-group-hdr.income { color: #059669; background: #F0FDF4; }
+    .article-group-hdr.expense { color: #B91C1C; background: #FEF2F2; }
+    .expand-chevron { font-size: 10px; color: #9CA3AF; margin-left: 8px; transition: transform 0.2s; display: inline-block; flex-shrink: 0; }
+    .article-item.is-expanded .expand-chevron { transform: rotate(90deg); }
+    .article-expand-body { background: #F9FAFB; border-bottom: 1px solid #E5E7EB; padding: 16px 20px; display: none; }
+    .article-expand-body.open { display: block; }
+
+    /* ─── Mini month chart ─── */
+    .mini-bars { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
+    .mini-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+    .mini-bar-fill { width: 100%; border-radius: 2px 2px 0 0; }
+    .mini-bar-lbl { font-size: 9px; color: #9CA3AF; text-align: center; }
+    .mini-bar-val { font-size: 9px; color: #6B7280; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+    /* ─── Matrix table ─── */
+    .matrix-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .matrix-tbl th { padding: 9px 10px; text-align: right; font-size: 10px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #E5E7EB; background: #F9FAFB; white-space: nowrap; }
+    .matrix-tbl th:first-child { text-align: left; position: sticky; left: 0; z-index: 2; min-width: 150px; max-width: 220px; }
+    .matrix-tbl td { padding: 8px 10px; border-bottom: 1px solid #F3F4F6; text-align: right; white-space: nowrap; }
+    .matrix-tbl td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; font-size: 12px; color: #374151; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+    .matrix-tbl tr:hover td { background: #F9FAFB; }
+    .matrix-tbl tr:hover td:first-child { background: #F9FAFB; }
+    .matrix-tbl .m-income { color: #059669; font-weight: 700; }
+    .matrix-tbl .m-expense { color: #DC2626; font-weight: 700; }
+    .matrix-tbl .m-zero { color: #D1D5DB; }
+    .matrix-tbl .m-loading { color: #D1D5DB; font-size: 11px; }
+    .matrix-tbl .m-total { font-weight: 800; border-left: 2px solid #E5E7EB; }
+    .matrix-tbl .grp-row td { padding: 5px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .matrix-tbl .grp-income td { color: #059669; background: #F0FDF4; }
+    .matrix-tbl .grp-expense td { color: #B91C1C; background: #FEF2F2; }
+    .matrix-tbl .sum-row td { background: #F9FAFB; border-top: 1px solid #E5E7EB; font-size: 11px; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -250,15 +293,26 @@
 
       <!-- ── РАЗДЕЛ 2: КУДА УШЛИ ДЕНЬГИ ── -->
       <div class="section" id="section-expenses">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h2 class="section-title" style="margin-bottom:0">Куда ушли деньги</h2>
-          <div class="flex gap-2">
-            <button class="sort-btn active" id="sortByAmount" onclick="setSortArticles('amount')">По сумме</button>
-            <button class="sort-btn" id="sortByAlpha" onclick="setSortArticles('alpha')">По алфавиту</button>
+          <div class="flex gap-2 flex-wrap items-center">
+            <div class="flex gap-1">
+              <button class="sort-btn active" id="expTabList" onclick="setExpensesTab('list')">По статьям</button>
+              <button class="sort-btn" id="expTabTable" onclick="setExpensesTab('table')">Таблица</button>
+            </div>
+            <div id="expSortBtns" class="flex gap-1">
+              <button class="sort-btn active" id="sortByAmount" onclick="setSortArticles('amount')">По сумме</button>
+              <button class="sort-btn" id="sortByAlpha" onclick="setSortArticles('alpha')">По алфавиту</button>
+            </div>
           </div>
         </div>
-        <div class="card" style="padding: 0; overflow: hidden;">
+        <!-- Sub-tab: По статьям -->
+        <div id="expSubList" class="card" style="padding: 0; overflow: hidden;">
           <div id="articlesList"></div>
+        </div>
+        <!-- Sub-tab: Таблица -->
+        <div id="expSubTable" style="display:none;padding:0;overflow:hidden;background:#fff;border:1px solid #E5E7EB;border-radius:12px;margin-bottom:16px;">
+          <div style="overflow-x: auto;" id="matrixWrap"></div>
         </div>
       </div>
 
@@ -293,6 +347,9 @@
   </main>
 </div>
 
+<!-- TOOLTIP -->
+<div id="articleTooltip" class="art-tooltip" style="display:none;"></div>
+
 <!-- OVERLAY + DRILL-DOWN PANEL -->
 <div class="overlay" id="overlay" onclick="closeDrill()"></div>
 <div class="drill-panel" id="drillPanel">
@@ -314,6 +371,11 @@ let articleSortMode = 'amount';
 let chartTop5Instance = null;
 let chartDaysInstance = null;
 let monthlyBalance = null; // { "1": { incoming, outgoing }, ... } — данные по всем месяцам
+let allMonthsData = {};    // { month: rows[] } — сырые строки по каждому месяцу
+let allMonthsLoaded = {};  // { month: 'loading'|'done'|'error' }
+let expandedArticles = {}; // { 'income::name' | 'expense::name': true }
+let expensesTab = 'list';  // 'list' | 'table'
+let _artItems = [];        // [{keyStr, name, type}] — порядок статей в текущем рендере
 
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                      'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -406,6 +468,8 @@ function loadData() {
 
 function onDataLoaded(data) {
   allRows = data.rows || [];
+  allMonthsData[currentMonth] = allRows;
+  allMonthsLoaded[currentMonth] = 'done';
   if (allRows.length === 0) {
     document.getElementById('emptyMsg').textContent = 'Нет данных за ' + MONTH_NAMES[currentMonth - 1];
     showState('empty');
@@ -450,7 +514,7 @@ function applyFilters() {
 function renderAll() {
   renderKPI();
   renderTop5Chart();
-  renderArticlesList();
+  renderExpensesSection();
   renderStoreGrid();
   renderDaysChart();
   renderTop10();
@@ -567,33 +631,153 @@ function renderTop5Chart() {
   });
 }
 
-// ─── ARTICLES LIST ────────────────────────────────────
-function renderArticlesList() {
-  const articles = getArticlesData(filteredRows);
-  if (articleSortMode === 'alpha') articles.sort((a, b) => a[0].localeCompare(b[0]));
-  const total = articles.reduce((s, a) => s + a[1], 0);
+// ─── ARTICLES LIST (expandable) ───────────────────────
+function getIncomeArticles(rows) {
+  const map = {};
+  rows.forEach(r => {
+    if (r.type !== 'Поступление' || r.activity === 'Техническая операция') return;
+    const key = r.article || 'Прочее';
+    map[key] = (map[key] || 0) + r.amount;
+  });
+  return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
+function getStoreBreakdown(rows, articleName, type) {
+  const map = {};
+  rows.forEach(r => {
+    if (r.activity === 'Техническая операция') return;
+    if (type === 'income' && r.type !== 'Поступление') return;
+    if (type === 'expense' && (r.type !== 'Выбытие' || r.activity !== 'Операционная' || r.direction === 'Операция')) return;
+    if (r.article !== articleName) return;
+    const s = shortStoreName(r.store) || 'Общее';
+    map[s] = (map[s] || 0) + Math.abs(r.amount);
+  });
+  return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
+function buildExpandBody(name, type) {
+  const color = type === 'income' ? '#10B981' : '#EF4444';
+  const months = Array.from({length: currentMonth}, (_, i) => i + 1);
+  const mNames = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+
+  const vals = months.map(m => {
+    const rows = allMonthsData[m] || [];
+    return rows.reduce((s, r) => {
+      if (r.activity === 'Техническая операция') return s;
+      if (type === 'income' && r.type !== 'Поступление') return s;
+      if (type === 'expense' && (r.type !== 'Выбытие' || r.activity !== 'Операционная' || r.direction === 'Операция')) return s;
+      if (r.article !== name) return s;
+      return s + Math.abs(r.amount);
+    }, 0);
+  });
+
+  const maxVal = Math.max(...vals, 1);
+
+  const chartHtml = `
+    <div style="margin-bottom: 16px;">
+      <div style="font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Динамика по месяцам</div>
+      <div class="mini-bars">
+        ${months.map((m, i) => {
+          const val = vals[i];
+          const isLoading = !allMonthsData[m] && allMonthsLoaded[m] === 'loading';
+          const h = maxVal > 0 && val > 0 ? Math.max(Math.round(val / maxVal * 44), 3) : 2;
+          const bg = isLoading ? '#E5E7EB' : (val === 0 ? '#F3F4F6' : color);
+          return `<div class="mini-bar-col">
+            <div class="mini-bar-val">${val > 0 ? fmtShort(val) : (isLoading ? '…' : '')}</div>
+            <div style="flex:1;display:flex;align-items:flex-end;width:100%">
+              <div class="mini-bar-fill" style="height:${h}px;background:${bg};width:100%"></div>
+            </div>
+            <div class="mini-bar-lbl">${mNames[m-1]}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  const stores = getStoreBreakdown(filteredRows, name, type);
+  const storeTotal = stores.reduce((s, [,a]) => s + a, 0);
+  const storeHtml = stores.length ? `
+    <div>
+      <div style="font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">По магазинам — ${mNames[currentMonth-1]}</div>
+      ${stores.map(([store, amt]) => {
+        const pct = storeTotal > 0 ? Math.round(amt / storeTotal * 100) : 0;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0">
+          <div style="width:90px;font-size:12px;color:#374151;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(store)}</div>
+          <div style="flex:1;height:4px;background:#F3F4F6;border-radius:2px;min-width:40px">
+            <div style="height:4px;width:${pct}%;background:${color};border-radius:2px"></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:${color};white-space:nowrap;text-align:right;min-width:90px">${fmt(amt)}</div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  return chartHtml + storeHtml;
+}
+
+function toggleExpandArticle(idx) {
+  const { keyStr, name, type } = _artItems[idx];
+  if (expandedArticles[keyStr]) {
+    delete expandedArticles[keyStr];
+  } else {
+    expandedArticles[keyStr] = true;
+    loadAllMonths();
+  }
+  renderExpandableList();
+}
+
+function renderExpandableList() {
+  const incomeArticles = getIncomeArticles(filteredRows);
+  const expenseArticles = getArticlesData(filteredRows);
+  if (articleSortMode === 'alpha') {
+    incomeArticles.sort((a, b) => a[0].localeCompare(b[0]));
+    expenseArticles.sort((a, b) => a[0].localeCompare(b[0]));
+  }
+
   const container = document.getElementById('articlesList');
-  if (articles.length === 0) {
-    container.innerHTML = '<p class="text-gray-400 text-sm p-4">Нет статей расходов</p>';
+  _artItems = [];
+  let html = '';
+
+  const renderGroup = (articles, type, labelHtml, colorClass, barColor) => {
+    if (!articles.length) return;
+    const total = articles.reduce((s, [,a]) => s + a, 0);
+    html += `<div class="article-group-hdr ${colorClass}">${labelHtml} — ${fmt(total)}</div>`;
+    articles.forEach(([name, amount]) => {
+      const idx = _artItems.length;
+      const keyStr = type + '::' + name;
+      _artItems.push({ keyStr, name, type });
+      const isExp = !!expandedArticles[keyStr];
+      const pct = total > 0 ? (amount / total * 100).toFixed(1) : 0;
+      const barW = Math.min(Math.round(pct), 100);
+      html += `<div class="article-item${isExp ? ' is-expanded' : ''}"
+          onmouseenter="showTooltip(event,${idx})"
+          onmouseleave="hideTooltip()"
+          onclick="toggleExpandArticle(${idx})">
+        <div class="article-name">${escHtml(name)}</div>
+        <div class="article-bar-wrap"><div class="article-bar" style="width:${barW}%;background:${barColor}"></div></div>
+        <div class="article-pct">${pct}%</div>
+        <div class="article-amount" style="color:${barColor}">${fmt(amount)}</div>
+        <span class="expand-chevron">▶</span>
+      </div>
+      <div class="article-expand-body${isExp ? ' open' : ''}">
+        ${isExp ? buildExpandBody(name, type) : ''}
+      </div>`;
+    });
+  };
+
+  renderGroup(incomeArticles, 'income', '💰 Поступления', 'income', '#10B981');
+  renderGroup(expenseArticles, 'expense', '💸 Расходы операционные', 'expense', '#EF4444');
+
+  if (!html) {
+    container.innerHTML = '<p class="text-gray-400 text-sm p-4">Нет данных</p>';
     return;
   }
-  container.innerHTML = articles.map(([name, amount]) => {
-    const pct = total > 0 ? (amount / total * 100).toFixed(1) : 0;
-    const barW = Math.round(pct);
-    return `<div class="article-item" onclick="openDrillArticle('${escAttr(name)}')">
-      <div class="article-name">${escHtml(name)}</div>
-      <div class="article-bar-wrap"><div class="article-bar" style="width:${barW}%"></div></div>
-      <div class="article-pct">${pct}%</div>
-      <div class="article-amount">${fmt(amount)}</div>
-    </div>`;
-  }).join('');
+  container.innerHTML = html;
 }
 
 function setSortArticles(mode) {
   articleSortMode = mode;
   document.getElementById('sortByAmount').classList.toggle('active', mode === 'amount');
   document.getElementById('sortByAlpha').classList.toggle('active', mode === 'alpha');
-  renderArticlesList();
+  renderExpandableList();
 }
 
 // ─── STORE GRID ───────────────────────────────────────
@@ -764,6 +948,185 @@ function closeDrill() {
   document.getElementById('drillPanel').classList.remove('open');
 }
 
+// ─── EXPENSES SECTION CONTROL ─────────────────────────
+function renderExpensesSection() {
+  if (expensesTab === 'list') renderExpandableList();
+  else renderMatrixTable();
+}
+
+function setExpensesTab(tab) {
+  expensesTab = tab;
+  document.getElementById('expTabList').classList.toggle('active', tab === 'list');
+  document.getElementById('expTabTable').classList.toggle('active', tab === 'table');
+  document.getElementById('expSortBtns').style.display = tab === 'list' ? '' : 'none';
+  document.getElementById('expSubList').style.display = tab === 'list' ? '' : 'none';
+  document.getElementById('expSubTable').style.display = tab === 'table' ? '' : 'none';
+  if (tab === 'table') { loadAllMonths(); renderMatrixTable(); }
+  else renderExpandableList();
+}
+
+// ─── LOAD ALL MONTHS ──────────────────────────────────
+function loadAllMonths() {
+  for (let m = 1; m <= currentMonth; m++) {
+    if (allMonthsLoaded[m] === 'done' || allMonthsLoaded[m] === 'loading') continue;
+    allMonthsLoaded[m] = 'loading';
+    const cacheKey = 'dds_cache_month_' + m;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { ts, data } = JSON.parse(cached);
+        if (Date.now() - ts < CACHE_TTL_MS) {
+          allMonthsData[m] = data.rows || [];
+          allMonthsLoaded[m] = 'done';
+          _refreshAfterMonthLoad();
+          continue;
+        }
+      }
+    } catch(e) {}
+    (function(month) {
+      fetch(DDS_GAS_URL + '?action=dds&month=' + month)
+        .then(r => r.json())
+        .then(resp => {
+          if (!resp.ok) throw new Error();
+          allMonthsData[month] = resp.data.rows || [];
+          allMonthsLoaded[month] = 'done';
+          localStorage.setItem('dds_cache_month_' + month, JSON.stringify({ ts: Date.now(), data: resp.data }));
+          _refreshAfterMonthLoad();
+        })
+        .catch(() => { allMonthsLoaded[month] = 'error'; });
+    })(m);
+  }
+}
+
+function _refreshAfterMonthLoad() {
+  if (expensesTab === 'table') { renderMatrixTable(); return; }
+  // Обновить только открытые expand-тела
+  if (!Object.keys(expandedArticles).length) return;
+  _artItems.forEach((item, idx) => {
+    if (!expandedArticles[item.keyStr]) return;
+    const bodies = document.getElementById('articlesList')
+      ?.querySelectorAll('.article-expand-body.open');
+    // Ищем тело по порядку (idx-й open-body в списке)
+    if (bodies) {
+      let openCount = 0;
+      const allBodies = document.getElementById('articlesList')
+        ?.querySelectorAll('.article-expand-body');
+      if (allBodies && allBodies[idx]) {
+        if (allBodies[idx].classList.contains('open')) {
+          allBodies[idx].innerHTML = buildExpandBody(item.name, item.type);
+        }
+      }
+    }
+  });
+}
+
+// ─── MATRIX TABLE ─────────────────────────────────────
+function renderMatrixTable() {
+  const wrap = document.getElementById('matrixWrap');
+  const months = Array.from({length: currentMonth}, (_, i) => i + 1);
+  const mNames = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+
+  // Собираем данные по ВСЕМ месяцам (без фильтров)
+  const incomeMap = {};  // article -> { byMonth: {}, total }
+  const expenseMap = {};
+  months.forEach(m => {
+    (allMonthsData[m] || []).forEach(r => {
+      if (r.activity === 'Техническая операция') return;
+      if (r.type === 'Поступление') {
+        const key = r.article || 'Прочее';
+        if (!incomeMap[key]) incomeMap[key] = { byMonth: {}, total: 0 };
+        incomeMap[key].byMonth[m] = (incomeMap[key].byMonth[m] || 0) + r.amount;
+        incomeMap[key].total += r.amount;
+      }
+      if (r.type === 'Выбытие' && r.activity === 'Операционная' && r.direction !== 'Операция') {
+        const key = r.article || 'Прочее';
+        if (!expenseMap[key]) expenseMap[key] = { byMonth: {}, total: 0 };
+        const amt = Math.abs(r.amount);
+        expenseMap[key].byMonth[m] = (expenseMap[key].byMonth[m] || 0) + amt;
+        expenseMap[key].total += amt;
+      }
+    });
+  });
+
+  const incomeArticles = Object.entries(incomeMap).sort((a, b) => b[1].total - a[1].total);
+  const expenseArticles = Object.entries(expenseMap).sort((a, b) => b[1].total - a[1].total);
+
+  const loadingMonths = months.filter(m => allMonthsLoaded[m] === 'loading');
+  const loadingNote = loadingMonths.length
+    ? `<div style="padding:8px 16px;font-size:11px;color:#9CA3AF;border-bottom:1px solid #E5E7EB;background:#F9FAFB">Загрузка: ${loadingMonths.map(m => mNames[m-1]).join(', ')}…</div>`
+    : '';
+
+  const headerCols = months.map(m => `<th>${mNames[m-1]}</th>`).join('');
+
+  const renderGroup = (articles, colorCls, grpCls, label) => {
+    if (!articles.length) return '';
+    const rows = articles.map(([name, data]) => {
+      const cells = months.map(m => {
+        if (!allMonthsData[m] && allMonthsLoaded[m] === 'loading')
+          return `<td class="m-loading">…</td>`;
+        const val = data.byMonth[m];
+        if (!val) return `<td class="m-zero">—</td>`;
+        return `<td class="${colorCls}">${fmtShort(val)}</td>`;
+      }).join('');
+      return `<tr><td title="${escHtml(name)}">${escHtml(truncate(name, 30))}</td>${cells}<td class="m-total ${colorCls}">${fmtShort(data.total)}</td></tr>`;
+    }).join('');
+    const sumCells = months.map(m => {
+      const s = articles.reduce((acc, [,d]) => acc + (d.byMonth[m] || 0), 0);
+      return s > 0 ? `<td class="${colorCls}" style="font-weight:800">${fmtShort(s)}</td>` : `<td class="m-zero">—</td>`;
+    }).join('');
+    const grandTotal = articles.reduce((s, [,d]) => s + d.total, 0);
+    return `
+      <tr class="grp-row grp-${grpCls}"><td colspan="${months.length + 2}">${label}</td></tr>
+      ${rows}
+      <tr class="sum-row">
+        <td style="font-weight:700;color:#374151">ИТОГО</td>
+        ${sumCells}
+        <td class="m-total ${colorCls}" style="font-weight:800">${fmtShort(grandTotal)}</td>
+      </tr>`;
+  };
+
+  wrap.innerHTML = loadingNote + `
+    <table class="matrix-tbl">
+      <thead><tr>
+        <th style="text-align:left">Статья</th>
+        ${headerCols}
+        <th class="m-total">ИТОГО</th>
+      </tr></thead>
+      <tbody>
+        ${renderGroup(incomeArticles, 'm-income', 'income', '💰 Поступления')}
+        ${renderGroup(expenseArticles, 'm-expense', 'expense', '💸 Расходы операционные')}
+      </tbody>
+    </table>`;
+}
+
+// ─── TOOLTIP ──────────────────────────────────────────
+function showTooltip(e, idx) {
+  const { name, type } = _artItems[idx] || {};
+  if (!name) return;
+  const stores = getStoreBreakdown(filteredRows, name, type);
+  if (!stores.length) return;
+  const colorClass = type === 'income' ? 'income' : 'expense';
+  const tip = document.getElementById('articleTooltip');
+  tip.innerHTML = `<div class="art-tooltip-title">По магазинам</div>` +
+    stores.map(([store, amt]) =>
+      `<div class="art-tooltip-row">
+        <div class="art-tooltip-store">${escHtml(store)}</div>
+        <div class="art-tooltip-amt ${colorClass}">${fmt(amt)}</div>
+      </div>`
+    ).join('');
+  const tw = 220, th = 22 + stores.length * 22;
+  let x = e.clientX + 14, y = e.clientY + 10;
+  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 14;
+  if (y + th > window.innerHeight - 10) y = e.clientY - th - 10;
+  tip.style.left = x + 'px';
+  tip.style.top = y + 'px';
+  tip.style.display = 'block';
+}
+
+function hideTooltip() {
+  document.getElementById('articleTooltip').style.display = 'none';
+}
+
 // ─── NAVIGATION ───────────────────────────────────────
 function setSection(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -771,6 +1134,7 @@ function setSection(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('nav-' + name).classList.add('active');
   closeDrill();
+  if (name === 'expenses') loadAllMonths();
 }
 
 // ─── UI STATES ────────────────────────────────────────
