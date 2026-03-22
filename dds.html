@@ -1191,21 +1191,41 @@ function renderMatrixTable() {
 }
 
 // ─── TOOLTIP ──────────────────────────────────────────
-function showTooltip(e, idx) {
-  const { name, type } = _artItems[idx] || {};
+function showTooltip(e) {
+  const row = e.currentTarget;
+  const name = row.dataset.name;
+  const type = row.dataset.type;
   if (!name) return;
+
+  const directions = getDirectionBreakdown(filteredRows, name, type);
   const stores = getStoreBreakdown(filteredRows, name, type);
-  if (!stores.length) return;
-  const colorClass = type === 'income' ? 'income' : 'expense';
+  if (!directions.length && !stores.length) return;
+
+  const colorExp = '#F87171', colorInc = '#34D399';
+  const color = type === 'income' ? colorInc : colorExp;
+
+  const renderBlock = (title, items) => {
+    if (!items.length) return '';
+    const maxAmt = items[0][1]; // отсортированы по убыванию
+    const rows = items.map(([label, amt]) => {
+      const barW = maxAmt > 0 ? Math.round(amt / maxAmt * 44) : 0;
+      return `<div class="art-tooltip-row">
+        <div class="art-tooltip-store">${escHtml(label)}</div>
+        <div class="art-tooltip-bar-wrap"><div class="art-tooltip-bar-fill" style="width:${barW}px;background:${color}"></div></div>
+        <div class="art-tooltip-amt" style="color:${color}">${fmt(amt)}</div>
+      </div>`;
+    }).join('');
+    return `<div class="art-tooltip-title">${title}</div>${rows}`;
+  };
+
+  const dirBlock = renderBlock('По направлениям', directions);
+  const storeBlock = renderBlock('По магазинам', stores);
+  const divider = (dirBlock && storeBlock) ? '<hr class="art-tooltip-divider">' : '';
+
   const tip = document.getElementById('articleTooltip');
-  tip.innerHTML = `<div class="art-tooltip-title">По магазинам</div>` +
-    stores.map(([store, amt]) =>
-      `<div class="art-tooltip-row">
-        <div class="art-tooltip-store">${escHtml(store)}</div>
-        <div class="art-tooltip-amt ${colorClass}">${fmt(amt)}</div>
-      </div>`
-    ).join('');
-  const tw = 220, th = 22 + stores.length * 22;
+  tip.innerHTML = dirBlock + divider + storeBlock;
+
+  const tw = 260, th = tip.scrollHeight || 200;
   let x = e.clientX + 14, y = e.clientY + 10;
   if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 14;
   if (y + th > window.innerHeight - 10) y = e.clientY - th - 10;
