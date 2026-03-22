@@ -169,7 +169,7 @@ Monetary values formatted with `fmtShort()` — copy the existing function from 
 
 ## Caching
 
-Key: `daracom_opiu_${month}`, TTL: 30 min (same as `dashboard.html`).
+Key: `daracom_opiu_${year}_${month}` where `year = new Date().getFullYear()`, TTL: 30 min. Year is included to prevent January 2027 from returning cached January 2026 data.
 `↻ Обновить` explicitly calls `localStorage.removeItem('daracom_opiu_' + currentMonth)` then calls `loadData(true)` — bypasses cache entirely for this request.
 
 ---
