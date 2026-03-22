@@ -22,6 +22,11 @@ const TOTAL_COL  = 12;
 
 // ═══════════════════ ENTRY POINT ═════════════════
 function doGet(e) {
+  // Роутинг: ?action=dds → ДДС endpoint (логика в dds.gs)
+  if (e && e.parameter && e.parameter.action === 'dds') {
+    return doGetDDS(e);
+  }
+
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json; charset=utf-8'

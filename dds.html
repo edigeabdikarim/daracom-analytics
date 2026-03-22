@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ДДС · Daracom</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pageBg: '#F8F9FC',
+            surface: '#FFFFFF',
+            border: '#E5E7EB',
+            textMain: '#111827',
+            textMuted: '#6B7280',
+            accent: '#10B981',
+            danger: '#EF4444',
+            warning: '#F59E0B',
+            info: '#3B82F6',
+          },
+          fontFamily: { sans: ['Manrope', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #F8F9FC; color: #111827; font-family: 'Manrope', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #F1F5F9; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+
+    /* Layout */
+    .app-layout { display: flex; height: calc(100vh - 57px); overflow: hidden; }
+    .sidebar { width: 200px; min-width: 200px; background: #fff; border-right: 1px solid #E5E7EB; overflow-y: auto; display: flex; flex-direction: column; }
+    .main-area { flex: 1; overflow-y: auto; padding: 24px; }
+
+    /* Sidebar nav */
+    .nav-item { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer; border-radius: 8px; margin: 2px 8px; font-size: 14px; font-weight: 500; color: #6B7280; transition: all 0.15s; }
+    .nav-item:hover { background: #F3F4F6; color: #111827; }
+    .nav-item.active { background: #ECFDF5; color: #10B981; }
+    .nav-icon { width: 18px; text-align: center; }
+
+    /* Filters */
+    .filter-label { font-size: 11px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 16px; margin-top: 16px; margin-bottom: 4px; }
+    .filter-select { display: block; width: calc(100% - 32px); margin: 0 16px 8px; padding: 6px 10px; font-size: 13px; border: 1px solid #E5E7EB; border-radius: 6px; background: #F9FAFB; color: #374151; outline: none; font-family: 'Manrope', sans-serif; }
+    .filter-select:focus { border-color: #10B981; }
+
+    /* KPI cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; }
+    .kpi-label { font-size: 12px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .kpi-value { font-size: 22px; font-weight: 800; color: #111827; }
+    .kpi-green .kpi-value { color: #10B981; }
+    .kpi-red .kpi-value { color: #EF4444; }
+    .kpi-blue .kpi-value { color: #3B82F6; }
+
+    /* Section */
+    .section { display: none; }
+    .section.active { display: block; }
+    .section-title { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 16px; }
+
+    /* Card */
+    .card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th { padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #E5E7EB; background: #F9FAFB; position: sticky; top: 0; }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid #F3F4F6; color: #374151; }
+    .data-table tr:last-child td { border-bottom: none; }
+
+    /* Article list item */
+    .article-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F3F4F6; cursor: pointer; transition: background 0.1s; }
+    .article-item:hover { background: #F9FAFB; }
+    .article-item:last-child { border-bottom: none; }
+    .article-name { flex: 1; font-size: 14px; font-weight: 500; color: #374151; }
+    .article-pct { font-size: 12px; color: #9CA3AF; margin: 0 12px; }
+    .article-amount { font-size: 14px; font-weight: 700; color: #EF4444; }
+    .article-bar-wrap { width: 80px; height: 4px; background: #F3F4F6; border-radius: 2px; margin: 0 12px; }
+    .article-bar { height: 4px; background: #EF4444; border-radius: 2px; }
+
+    /* Store grid */
+    .store-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .store-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; cursor: pointer; transition: box-shadow 0.15s; }
+    .store-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .store-name { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 12px; }
+    .store-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
+    .store-row-label { color: #6B7280; }
+    .store-row-val { font-weight: 600; }
+
+    /* Drill-down panel */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 40; display: none; }
+    .overlay.open { display: block; }
+    .drill-panel { position: fixed; top: 0; right: -480px; width: 480px; height: 100vh; background: #fff; border-left: 1px solid #E5E7EB; z-index: 50; display: flex; flex-direction: column; transition: right 0.25s ease; overflow: hidden; }
+    .drill-panel.open { right: 0; }
+    .drill-header { padding: 20px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: flex-start; }
+    .drill-title { font-size: 16px; font-weight: 700; color: #111827; flex: 1; padding-right: 12px; }
+    .drill-close { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; cursor: pointer; color: #6B7280; background: #F3F4F6; font-size: 16px; flex-shrink: 0; }
+    .drill-close:hover { background: #E5E7EB; color: #111827; }
+    .drill-summary { padding: 16px 20px; border-bottom: 1px solid #E5E7EB; display: flex; gap: 20px; flex-wrap: wrap; }
+    .drill-stat { display: flex; flex-direction: column; }
+    .drill-stat-label { font-size: 11px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .drill-stat-value { font-size: 18px; font-weight: 800; color: #111827; }
+    .drill-body { flex: 1; overflow-y: auto; }
+
+    /* Sort buttons */
+    .sort-btn { padding: 6px 14px; font-size: 12px; font-weight: 600; border: 1px solid #E5E7EB; border-radius: 6px; cursor: pointer; background: #F9FAFB; color: #6B7280; transition: all 0.15s; }
+    .sort-btn.active { background: #111827; color: #fff; border-color: #111827; }
+
+    /* Loader */
+    .loader { border: 3px solid #E5E7EB; border-top-color: #10B981; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Tablet: sidebar collapse */
+    @media (max-width: 1199px) {
+      .sidebar { display: none; position: fixed; top: 57px; left: 0; height: calc(100vh - 57px); z-index: 30; box-shadow: 4px 0 16px rgba(0,0,0,0.1); }
+      .sidebar.mobile-open { display: flex; }
+      #hamburger { display: flex !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ═══════════ КОНФИГУРАЦИЯ ═══════════ -->
+<script>
+  // ВАЖНО: вставить URL задеплоенного GAS endpoint
+  // Формат запроса: DDS_GAS_URL + '?action=dds&month=' + N
+  const DDS_GAS_URL = 'https://script.google.com/macros/s/AKfycbys3hHPuyBSce--cqASzZG5lf7Dj1M7qrARMLQagHFj-eK65WmxsvUFVYcy9Z3eh1meag/exec';
+  const CACHE_TTL_MS = 30 * 60 * 1000; // 30 минут
+</script>
+
+<!-- ═══════════ TOPBAR ═══════════ -->
+<header class="sticky top-0 z-20 bg-white border-b border-gray-200 px-5 h-[57px] flex items-center justify-between shadow-sm">
+  <div class="flex items-center gap-3">
+    <button id="hamburger" style="display:none" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500 text-xl" onclick="toggleSidebar()">☰</button>
+    <div>
+      <span class="font-bold text-gray-900 text-base">ДДС · Daracom</span>
+      <span class="text-gray-400 mx-2">·</span>
+      <span class="text-sm text-gray-500" id="headerSub">Загрузка…</span>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <a href="dashboard.html" class="text-sm text-gray-500 hover:text-gray-900 font-medium px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">← Финотчёт</a>
+    <select id="monthSel" class="border border-gray-200 text-sm rounded-lg px-3 py-1.5 bg-white text-gray-800 outline-none focus:ring-1 focus:ring-green-500 font-medium cursor-pointer">
+      <option value="1">Январь</option><option value="2">Февраль</option>
+      <option value="3">Март</option><option value="4">Апрель</option>
+      <option value="5">Май</option><option value="6">Июнь</option>
+      <option value="7">Июль</option><option value="8">Август</option>
+      <option value="9">Сентябрь</option><option value="10">Октябрь</option>
+      <option value="11">Ноябрь</option><option value="12">Декабрь</option>
+    </select>
+  </div>
+</header>
+
+<!-- ═══════════ APP LAYOUT ═══════════ -->
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <nav style="padding: 12px 0; margin-top: 4px;">
+      <div class="nav-item active" onclick="setSection('overview')" id="nav-overview">
+        <span class="nav-icon">📊</span> Обзор
+      </div>
+      <div class="nav-item" onclick="setSection('expenses')" id="nav-expenses">
+        <span class="nav-icon">💸</span> Куда ушли
+      </div>
+      <div class="nav-item" onclick="setSection('stores')" id="nav-stores">
+        <span class="nav-icon">🏪</span> По магазинам
+      </div>
+      <div class="nav-item" onclick="setSection('days')" id="nav-days">
+        <span class="nav-icon">📅</span> По дням
+      </div>
+    </nav>
+
+    <div style="border-top: 1px solid #E5E7EB; padding-top: 12px; margin-top: 4px;">
+      <div class="filter-label">Фильтры</div>
+
+      <div class="filter-label" style="margin-top: 10px;">Магазин</div>
+      <select class="filter-select" id="filterStore" onchange="applyFilters()">
+        <option value="">Все</option>
+      </select>
+
+      <div class="filter-label">Направление</div>
+      <select class="filter-select" id="filterDirection" onchange="applyFilters()">
+        <option value="">Все</option>
+        <option>Зарплаты</option>
+        <option>Адм. расходы</option>
+        <option>Налоги</option>
+        <option>Продажи</option>
+        <option>ОС</option>
+      </select>
+
+      <div class="filter-label">Тип операции</div>
+      <select class="filter-select" id="filterType" onchange="applyFilters()">
+        <option value="">Все</option>
+        <option>Выбытие</option>
+        <option>Поступление</option>
+      </select>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main class="main-area" id="mainArea">
+
+    <!-- Loading -->
+    <div id="stateLoading" class="flex flex-col items-center justify-center h-full gap-4">
+      <div class="loader"></div>
+      <p class="text-gray-400 text-sm font-medium">Загрузка данных ДДС…</p>
+    </div>
+
+    <!-- Error -->
+    <div id="stateError" class="hidden flex-col items-center justify-center h-full gap-4">
+      <div class="text-4xl">⚠️</div>
+      <p class="text-gray-700 font-semibold" id="errorMsg">Ошибка загрузки</p>
+      <button onclick="loadData()" class="px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-700">Повторить</button>
+    </div>
+
+    <!-- Empty -->
+    <div id="stateEmpty" class="hidden flex-col items-center justify-center h-full gap-4">
+      <div class="text-4xl">📭</div>
+      <p class="text-gray-500 font-medium" id="emptyMsg">Нет данных за выбранный месяц</p>
+    </div>
+
+    <!-- Content -->
+    <div id="stateContent" class="hidden">
+
+      <!-- ── РАЗДЕЛ 1: ОБЗОР ── -->
+      <div class="section active" id="section-overview">
+        <h2 class="section-title">Обзор</h2>
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-gray-800">Топ-5 статей расходов</h3>
+            <span class="text-xs text-gray-400">нажмите на бар для деталей</span>
+          </div>
+          <div style="max-height: 240px;">
+            <canvas id="chartTop5"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── РАЗДЕЛ 2: КУДА УШЛИ ДЕНЬГИ ── -->
+      <div class="section" id="section-expenses">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title" style="margin-bottom:0">Куда ушли деньги</h2>
+          <div class="flex gap-2">
+            <button class="sort-btn active" id="sortByAmount" onclick="setSortArticles('amount')">По сумме</button>
+            <button class="sort-btn" id="sortByAlpha" onclick="setSortArticles('alpha')">По алфавиту</button>
+          </div>
+        </div>
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <div id="articlesList"></div>
+        </div>
+      </div>
+
+      <!-- ── РАЗДЕЛ 3: ПО МАГАЗИНАМ ── -->
+      <div class="section" id="section-stores">
+        <h2 class="section-title">По магазинам</h2>
+        <div class="store-grid" id="storeGrid"></div>
+      </div>
+
+      <!-- ── РАЗДЕЛ 4: ПО ДНЯМ ── -->
+      <div class="section" id="section-days">
+        <h2 class="section-title">Деньги по дням</h2>
+        <div class="card">
+          <canvas id="chartDays" style="max-height: 300px;"></canvas>
+        </div>
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <div style="padding: 16px 20px; border-bottom: 1px solid #F3F4F6;">
+            <span class="font-semibold text-gray-800 text-sm">Топ-10 крупнейших операций</span>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Дата</th><th>Магазин</th><th>Статья</th><th>Тип</th><th style="text-align:right">Сумма</th></tr>
+              </thead>
+              <tbody id="top10Body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /stateContent -->
+  </main>
+</div>
+
+<!-- OVERLAY + DRILL-DOWN PANEL -->
+<div class="overlay" id="overlay" onclick="closeDrill()"></div>
+<div class="drill-panel" id="drillPanel">
+  <div class="drill-header">
+    <div class="drill-title" id="drillTitle"></div>
+    <div class="drill-close" onclick="closeDrill()">✕</div>
+  </div>
+  <div class="drill-summary" id="drillSummary"></div>
+  <div class="drill-body" id="drillBody"></div>
+</div>
+
+<!-- ═══════════ JAVASCRIPT ═══════════ -->
+<script>
+// ─── STATE ───────────────────────────────────────────
+let allRows = [];
+let filteredRows = [];
+let currentMonth = new Date().getMonth() + 1;
+let articleSortMode = 'amount';
+let chartTop5Instance = null;
+let chartDaysInstance = null;
+
+const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                     'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+// ─── INIT ─────────────────────────────────────────────
+(function init() {
+  const sel = document.getElementById('monthSel');
+  sel.value = currentMonth;
+  sel.addEventListener('change', () => {
+    currentMonth = parseInt(sel.value);
+    loadData();
+  });
+  loadData();
+})();
+
+// ─── DATA LOADING ─────────────────────────────────────
+function loadData() {
+  showState('loading');
+  document.getElementById('headerSub').textContent = 'Загрузка…';
+
+  const cacheKey = 'dds_cache_month_' + currentMonth;
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const { ts, data } = JSON.parse(cached);
+      if (Date.now() - ts < CACHE_TTL_MS) {
+        onDataLoaded(data);
+        return;
+      }
+    }
+  } catch(e) { /* ignore cache error */ }
+
+  const url = DDS_GAS_URL + '?action=dds&month=' + currentMonth;
+  fetch(url)
+    .then(r => r.json())
+    .then(resp => {
+      if (!resp.ok) throw new Error(resp.error || 'GAS вернул ошибку');
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: resp.data }));
+      onDataLoaded(resp.data);
+    })
+    .catch(err => {
+      document.getElementById('errorMsg').textContent = 'Ошибка: ' + err.message;
+      showState('error');
+    });
+}
+
+function onDataLoaded(data) {
+  allRows = data.rows || [];
+  if (allRows.length === 0) {
+    document.getElementById('emptyMsg').textContent = 'Нет данных за ' + MONTH_NAMES[currentMonth - 1];
+    showState('empty');
+    return;
+  }
+  document.getElementById('headerSub').textContent =
+    MONTH_NAMES[currentMonth - 1] + ' 2026 · ' + allRows.length + ' операций';
+  populateStoreFilter();
+  resetFilters();
+}
+
+function resetFilters() {
+  document.getElementById('filterStore').value = '';
+  document.getElementById('filterDirection').value = '';
+  document.getElementById('filterType').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  const fStore = document.getElementById('filterStore').value;
+  const fDir   = document.getElementById('filterDirection').value;
+  const fType  = document.getElementById('filterType').value;
+
+  filteredRows = allRows.filter(r => {
+    if (fStore && r.store !== fStore) return false;
+    if (fDir   && r.direction !== fDir) return false;
+    if (fType  && r.type !== fType) return false;
+    return true;
+  });
+
+  if (filteredRows.length === 0 && allRows.length > 0) {
+    document.getElementById('emptyMsg').textContent = 'Нет операций по выбранным фильтрам';
+    showState('empty');
+    return;
+  }
+
+  showState('content');
+  renderAll();
+}
+
+// ─── RENDER ALL ───────────────────────────────────────
+function renderAll() {
+  renderKPI();
+  renderTop5Chart();
+  renderArticlesList();
+  renderStoreGrid();
+  renderDaysChart();
+  renderTop10();
+}
+
+// ─── KPI ──────────────────────────────────────────────
+// Поступления = SUM(type==='Поступление' AND activity!=='Техническая операция')
+// Выбытия     = SUM(type==='Выбытие' AND activity!=='Техническая операция', Math.abs)
+// Чистый CF   = Поступления − Выбытия
+// Опер.расх.  = SUM(type==='Выбытие' AND activity==='Операционная' AND direction!=='Операция', Math.abs)
+function calcKPI(rows) {
+  let incoming = 0, outgoing = 0, opExpenses = 0;
+  rows.forEach(r => {
+    if (r.activity === 'Техническая операция') return;
+    if (r.type === 'Поступление') {
+      incoming += r.amount; // amount положительный для Поступлений
+    }
+    if (r.type === 'Выбытие') {
+      outgoing += Math.abs(r.amount); // amount отрицательный для Выбытий
+      if (r.activity === 'Операционная' && r.direction !== 'Операция') {
+        opExpenses += Math.abs(r.amount);
+      }
+    }
+  });
+  return { incoming, outgoing, netCF: incoming - outgoing, opExpenses };
+}
+
+function renderKPI() {
+  const { incoming, outgoing, netCF, opExpenses } = calcKPI(filteredRows);
+  const cfClass = netCF >= 0 ? 'kpi-green' : 'kpi-red';
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card kpi-green">
+      <div class="kpi-label">Поступления</div>
+      <div class="kpi-value">${fmt(incoming)}</div>
+    </div>
+    <div class="kpi-card kpi-red">
+      <div class="kpi-label">Выбытия</div>
+      <div class="kpi-value">${fmt(outgoing)}</div>
+    </div>
+    <div class="kpi-card ${cfClass}">
+      <div class="kpi-label">Чистый Cash Flow</div>
+      <div class="kpi-value">${netCF >= 0 ? '+' : ''}${fmt(netCF)}</div>
+    </div>
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-label">Операционные расходы</div>
+      <div class="kpi-value">${fmt(opExpenses)}</div>
+    </div>
+  `;
+}
+
+// ─── TOP-5 CHART ──────────────────────────────────────
+// По статьям = группировка Опер. расходов по article
+function getArticlesData(rows) {
+  const map = {};
+  rows.forEach(r => {
+    if (r.type !== 'Выбытие' || r.activity !== 'Операционная' || r.direction === 'Операция') return;
+    const key = r.article || 'Прочее';
+    map[key] = (map[key] || 0) + Math.abs(r.amount);
+  });
+  return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
+function renderTop5Chart() {
+  const articles = getArticlesData(filteredRows).slice(0, 5);
+  if (chartTop5Instance) { chartTop5Instance.destroy(); chartTop5Instance = null; }
+  if (articles.length === 0) return;
+  const ctx = document.getElementById('chartTop5').getContext('2d');
+  chartTop5Instance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: articles.map(a => truncate(a[0], 32)),
+      datasets: [{
+        data: articles.map(a => a[1]),
+        backgroundColor: '#EF4444',
+        borderRadius: 4,
+        label: 'Расходы'
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        x: { ticks: { callback: v => fmtShort(v), font: { size: 11 } }, grid: { color: '#F3F4F6' } },
+        y: { ticks: { font: { size: 12 } }, grid: { display: false } }
+      },
+      onClick: (e, els) => {
+        if (!els.length) return;
+        openDrillArticle(articles[els[0].index][0]);
+      }
+    }
+  });
+}
+
+// ─── ARTICLES LIST ────────────────────────────────────
+function renderArticlesList() {
+  const articles = getArticlesData(filteredRows);
+  if (articleSortMode === 'alpha') articles.sort((a, b) => a[0].localeCompare(b[0]));
+  const total = articles.reduce((s, a) => s + a[1], 0);
+  const container = document.getElementById('articlesList');
+  if (articles.length === 0) {
+    container.innerHTML = '<p class="text-gray-400 text-sm p-4">Нет статей расходов</p>';
+    return;
+  }
+  container.innerHTML = articles.map(([name, amount]) => {
+    const pct = total > 0 ? (amount / total * 100).toFixed(1) : 0;
+    const barW = Math.round(pct);
+    return `<div class="article-item" onclick="openDrillArticle('${escAttr(name)}')">
+      <div class="article-name">${escHtml(name)}</div>
+      <div class="article-bar-wrap"><div class="article-bar" style="width:${barW}%"></div></div>
+      <div class="article-pct">${pct}%</div>
+      <div class="article-amount">${fmt(amount)}</div>
+    </div>`;
+  }).join('');
+}
+
+function setSortArticles(mode) {
+  articleSortMode = mode;
+  document.getElementById('sortByAmount').classList.toggle('active', mode === 'amount');
+  document.getElementById('sortByAlpha').classList.toggle('active', mode === 'alpha');
+  renderArticlesList();
+}
+
+// ─── STORE GRID ───────────────────────────────────────
+// По магазинам = группировка всех строк (activity!=='Техническая операция') по store
+function renderStoreGrid() {
+  const storeMap = {};
+  filteredRows.forEach(r => {
+    if (r.activity === 'Техническая операция' || !r.store) return;
+    if (!storeMap[r.store]) storeMap[r.store] = { inc: 0, out: 0 };
+    if (r.type === 'Поступление') storeMap[r.store].inc += r.amount;
+    if (r.type === 'Выбытие')     storeMap[r.store].out += Math.abs(r.amount);
+  });
+
+  const stores = Object.entries(storeMap).sort((a, b) => (b[1].inc + b[1].out) - (a[1].inc + a[1].out));
+  const grid = document.getElementById('storeGrid');
+  if (stores.length === 0) { grid.innerHTML = '<p class="text-gray-400 text-sm">Нет данных</p>'; return; }
+
+  grid.innerHTML = stores.map(([name, d]) => {
+    const cf = d.inc - d.out;
+    const cfColor = cf >= 0 ? '#10B981' : '#EF4444';
+    return `<div class="store-card" onclick="openDrillStore('${escAttr(name)}')">
+      <div class="store-name">${escHtml(shortStoreName(name))}</div>
+      <div class="store-row"><span class="store-row-label">Поступления</span><span class="store-row-val" style="color:#10B981">${fmt(d.inc)}</span></div>
+      <div class="store-row"><span class="store-row-label">Выбытия</span><span class="store-row-val" style="color:#EF4444">${fmt(d.out)}</span></div>
+      <div class="store-row" style="margin-top:8px;padding-top:8px;border-top:1px solid #F3F4F6">
+        <span class="store-row-label font-semibold">Чистый CF</span>
+        <span class="store-row-val" style="color:${cfColor}">${cf >= 0 ? '+' : ''}${fmt(cf)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── DAYS CHART ───────────────────────────────────────
+// По дням = группировка (activity!=='Техническая операция') по дню из date
+function renderDaysChart() {
+  const dayMap = {};
+  filteredRows.forEach(r => {
+    if (r.activity === 'Техническая операция') return;
+    const day = extractDay(r.date);
+    if (!day) return;
+    if (!dayMap[day]) dayMap[day] = { inc: 0, out: 0 };
+    if (r.type === 'Поступление') dayMap[day].inc += r.amount;
+    if (r.type === 'Выбытие')     dayMap[day].out += Math.abs(r.amount);
+  });
+
+  const days = Object.keys(dayMap).map(Number).sort((a, b) => a - b);
+  if (chartDaysInstance) { chartDaysInstance.destroy(); chartDaysInstance = null; }
+  if (days.length === 0) return;
+  const ctx = document.getElementById('chartDays').getContext('2d');
+  chartDaysInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: days.map(String),
+      datasets: [
+        { label: 'Поступления', data: days.map(d => dayMap[d].inc), backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 3 },
+        { label: 'Выбытия',     data: days.map(d => dayMap[d].out), backgroundColor: 'rgba(239,68,68,0.7)',  borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { ticks: { callback: v => fmtShort(v), font: { size: 11 } }, grid: { color: '#F3F4F6' } }
+      }
+    }
+  });
+}
+
+function renderTop10() {
+  const sorted = [...filteredRows]
+    .filter(r => r.activity !== 'Техническая операция')
+    .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+    .slice(0, 10);
+
+  document.getElementById('top10Body').innerHTML = sorted.map(r => {
+    const color = r.type === 'Поступление' ? '#10B981' : '#EF4444';
+    return `<tr>
+      <td>${r.date}</td>
+      <td>${escHtml(shortStoreName(r.store))}</td>
+      <td>${escHtml(r.article || r.purpose || '—')}</td>
+      <td><span style="color:${color};font-weight:600">${r.type}</span></td>
+      <td style="text-align:right;font-weight:700">${fmt(Math.abs(r.amount))}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── DRILL-DOWN ───────────────────────────────────────
+function openDrillArticle(article) {
+  const rows = filteredRows.filter(r =>
+    r.type === 'Выбытие' && r.activity === 'Операционная' &&
+    r.direction !== 'Операция' && r.article === article
+  ).sort((a, b) => a.date.localeCompare(b.date));
+
+  const total = rows.reduce((s, r) => s + Math.abs(r.amount), 0);
+  document.getElementById('drillTitle').textContent = article;
+  document.getElementById('drillSummary').innerHTML = `
+    <div class="drill-stat">
+      <div class="drill-stat-label">Итого расходы</div>
+      <div class="drill-stat-value" style="color:#EF4444">${fmt(total)}</div>
+    </div>
+    <div class="drill-stat">
+      <div class="drill-stat-label">Операций</div>
+      <div class="drill-stat-value">${rows.length}</div>
+    </div>
+  `;
+  document.getElementById('drillBody').innerHTML = `
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Дата</th><th>Магазин</th><th>Назначение</th><th style="text-align:right">Сумма</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr>
+            <td>${r.date}</td>
+            <td>${escHtml(shortStoreName(r.store))}</td>
+            <td>${escHtml(r.purpose || r.article || '—')}</td>
+            <td style="text-align:right;font-weight:700;color:#EF4444">${fmt(Math.abs(r.amount))}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  openDrill();
+}
+
+function openDrillStore(store) {
+  const rows = filteredRows.filter(r =>
+    r.store === store && r.activity !== 'Техническая операция'
+  ).sort((a, b) => a.date.localeCompare(b.date));
+
+  let inc = 0, out = 0;
+  rows.forEach(r => {
+    if (r.type === 'Поступление') inc += r.amount;
+    if (r.type === 'Выбытие')     out += Math.abs(r.amount);
+  });
+  const cf = inc - out;
+
+  document.getElementById('drillTitle').textContent = store;
+  document.getElementById('drillSummary').innerHTML = `
+    <div class="drill-stat"><div class="drill-stat-label">Поступления</div><div class="drill-stat-value" style="color:#10B981">${fmt(inc)}</div></div>
+    <div class="drill-stat"><div class="drill-stat-label">Выбытия</div><div class="drill-stat-value" style="color:#EF4444">${fmt(out)}</div></div>
+    <div class="drill-stat"><div class="drill-stat-label">Чистый CF</div><div class="drill-stat-value" style="color:${cf>=0?'#10B981':'#EF4444'}">${cf>=0?'+':''}${fmt(cf)}</div></div>
+  `;
+  document.getElementById('drillBody').innerHTML = `
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Дата</th><th>Статья</th><th>Назначение</th><th>Тип</th><th style="text-align:right">Сумма</th></tr></thead>
+        <tbody>${rows.map(r => {
+          const color = r.type==='Поступление'?'#10B981':'#EF4444';
+          return `<tr>
+            <td>${r.date}</td>
+            <td>${escHtml(r.article||'—')}</td>
+            <td>${escHtml(r.purpose||'—')}</td>
+            <td style="color:${color};font-weight:600">${r.type}</td>
+            <td style="text-align:right;font-weight:700">${fmt(Math.abs(r.amount))}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  openDrill();
+}
+
+function openDrill() {
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drillPanel').classList.add('open');
+}
+function closeDrill() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('drillPanel').classList.remove('open');
+}
+
+// ─── NAVIGATION ───────────────────────────────────────
+function setSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-' + name).classList.add('active');
+  closeDrill();
+}
+
+// ─── UI STATES ────────────────────────────────────────
+function showState(state) {
+  const states = { loading: 'stateLoading', error: 'stateError', empty: 'stateEmpty', content: 'stateContent' };
+  Object.entries(states).forEach(([s, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('hidden', s !== state);
+    if (s !== 'content') el.classList.toggle('flex', s === state);
+  });
+}
+
+// ─── SIDEBAR FILTER HELPERS ───────────────────────────
+function populateStoreFilter() {
+  const stores = [...new Set(allRows.map(r => r.store).filter(Boolean))].sort();
+  const sel = document.getElementById('filterStore');
+  sel.innerHTML = '<option value="">Все</option>' +
+    stores.map(s => `<option value="${escAttr(s)}">${escHtml(shortStoreName(s))}</option>`).join('');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+}
+
+// ─── UTILS ────────────────────────────────────────────
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(n) + ' ₸';
+}
+function fmtShort(n) {
+  if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+  return String(n);
+}
+function truncate(s, max) { return s.length > max ? s.slice(0, max) + '…' : s; }
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function escAttr(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+function extractDay(dateStr) {
+  const m = String(dateStr || '').match(/^(\d{1,2})\./);
+  return m ? parseInt(m[1]) : null;
+}
+function shortStoreName(s) {
+  return String(s || '').replace('Магазин ', '').trim() || s;
+}
+</script>
+
+</body>
+</html>
