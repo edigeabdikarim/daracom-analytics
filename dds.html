@@ -784,53 +784,98 @@ function toggleExpandArticle(idx) {
   renderExpandableList();
 }
 
-function renderExpandableList() {
-  const incomeArticles = getIncomeArticles(filteredRows);
-  const expenseArticles = getArticlesData(filteredRows);
-  if (articleSortMode === 'alpha') {
-    incomeArticles.sort((a, b) => a[0].localeCompare(b[0]));
-    expenseArticles.sort((a, b) => a[0].localeCompare(b[0]));
-  }
+function renderArticlesTable() {
+  const incomeArticles = sortIncomeArticles(getIncomeArticles(filteredRows));
+  const expenseArticles = getArticlesData(filteredRows); // уже отсортированы по сумме
+  const incomeTotal = incomeArticles.reduce((s, [,a]) => s + a, 0);
+  const expenseTotal = expenseArticles.reduce((s, [,a]) => s + a, 0);
 
   const container = document.getElementById('articlesList');
-  _artItems = [];
-  let html = '';
-
-  const renderGroup = (articles, type, labelHtml, colorClass, barColor) => {
-    if (!articles.length) return;
-    const total = articles.reduce((s, [,a]) => s + a, 0);
-    html += `<div class="article-group-hdr ${colorClass}">${labelHtml} — ${fmt(total)}</div>`;
-    articles.forEach(([name, amount]) => {
-      const idx = _artItems.length;
-      const keyStr = type + '::' + name;
-      _artItems.push({ keyStr, name, type });
-      const isExp = !!expandedArticles[keyStr];
-      const pct = total > 0 ? (amount / total * 100).toFixed(1) : 0;
-      const barW = Math.min(Math.round(pct), 100);
-      html += `<div class="article-item${isExp ? ' is-expanded' : ''}"
-          onmouseenter="showTooltip(event,${idx})"
-          onmouseleave="hideTooltip()"
-          onclick="toggleExpandArticle(${idx})">
-        <div class="article-name">${escHtml(name)}</div>
-        <div class="article-bar-wrap"><div class="article-bar" style="width:${barW}%;background:${barColor}"></div></div>
-        <div class="article-pct">${pct}%</div>
-        <div class="article-amount" style="color:${barColor}">${fmt(amount)}</div>
-        <span class="expand-chevron">▶</span>
-      </div>
-      <div class="article-expand-body${isExp ? ' open' : ''}">
-        ${isExp ? buildExpandBody(name, type) : ''}
-      </div>`;
-    });
-  };
-
-  renderGroup(incomeArticles, 'income', '💰 Поступления', 'income', '#10B981');
-  renderGroup(expenseArticles, 'expense', '💸 Расходы операционные', 'expense', '#EF4444');
-
-  if (!html) {
+  if (!incomeArticles.length && !expenseArticles.length) {
     container.innerHTML = '<p class="text-gray-400 text-sm p-4">Нет данных</p>';
     return;
   }
-  container.innerHTML = html;
+
+  const renderRow = (name, amount, groupTotal, incomeTotal, type) => {
+    const barPct = groupTotal > 0 ? Math.min(Math.round(amount / groupTotal * 100), 100) : 0;
+    const pctOfGroup = groupTotal > 0 ? (amount / groupTotal * 100).toFixed(1) : '0';
+    const pctOfIncome = incomeTotal > 0 ? (amount / incomeTotal * 100).toFixed(1) : '0';
+
+    // Направления для тэгов — уникальные значения из строк
+    const dirSet = new Set();
+    filteredRows.forEach(r => {
+      if (r.activity === 'Техническая операция') return;
+      if (type === 'income' && r.type !== 'Поступление') return;
+      if (type === 'expense' && (r.type !== 'Выбытие' || r.activity !== 'Операционная' || r.direction === 'Операция')) return;
+      if (r.article !== name) return;
+      if (r.direction) dirSet.add(r.direction);
+    });
+    const dirTags = [...dirSet].map(d => `<span class="art-tbl-dir">${escHtml(d)}</span>`).join('');
+
+    if (type === 'income') {
+      return `<tr class="art-row"
+          data-name="${escAttr(name)}" data-type="income"
+          onmouseenter="showTooltip(event)" onmouseleave="hideTooltip()">
+        <td class="art-tbl-name">${escHtml(name)}</td>
+        <td><div class="art-tbl-dirs">${dirTags}</div></td>
+        <td class="art-tbl-bar-cell"><div class="art-tbl-bar-bg"><div class="art-tbl-bar-i" style="width:${barPct}%"></div></div></td>
+        <td class="art-tbl-amt-i">${fmt(amount)}</td>
+        <td class="art-tbl-pct">
+          <span class="art-tbl-pct-main income">${pctOfGroup}%</span>
+          <span class="art-tbl-pct-sub">от итого</span>
+        </td>
+      </tr>`;
+    } else {
+      return `<tr class="art-row"
+          data-name="${escAttr(name)}" data-type="expense"
+          onmouseenter="showTooltip(event)" onmouseleave="hideTooltip()">
+        <td class="art-tbl-name">${escHtml(name)}</td>
+        <td><div class="art-tbl-dirs">${dirTags}</div></td>
+        <td class="art-tbl-bar-cell"><div class="art-tbl-bar-bg"><div class="art-tbl-bar-e" style="width:${barPct}%"></div></div></td>
+        <td class="art-tbl-amt-e">${fmt(amount)}</td>
+        <td class="art-tbl-pct">
+          <span class="art-tbl-pct-main">${pctOfGroup}%</span>
+          <span class="art-tbl-pct-sub">от выр: <span>${pctOfIncome}%</span></span>
+        </td>
+      </tr>`;
+    }
+  };
+
+  const incomeRows = incomeArticles.map(([name, amount]) =>
+    renderRow(name, amount, incomeTotal, incomeTotal, 'income')).join('');
+  const expenseRows = expenseArticles.map(([name, amount]) =>
+    renderRow(name, amount, expenseTotal, incomeTotal, 'expense')).join('');
+
+  container.innerHTML = `
+    <table class="art-tbl">
+      <thead><tr>
+        <th>Статья</th>
+        <th>Направления</th>
+        <th class="r" style="width:110px">Доля</th>
+        <th class="r">Сумма, ₸</th>
+        <th class="r" style="width:85px">%</th>
+      </tr></thead>
+      <tbody>
+        ${incomeArticles.length ? `
+          <tr class="art-tbl-grp income">
+            <td colspan="5">
+              <span class="art-tbl-grp-label">💰 Поступления</span>
+              <span class="art-tbl-grp-total">${fmt(incomeTotal)}</span>
+            </td>
+          </tr>
+          ${incomeRows}
+        ` : ''}
+        ${expenseArticles.length ? `
+          <tr class="art-tbl-grp expense">
+            <td colspan="5">
+              <span class="art-tbl-grp-label">💸 Расходы операционные</span>
+              <span class="art-tbl-grp-total">${fmt(expenseTotal)}</span>
+            </td>
+          </tr>
+          ${expenseRows}
+        ` : ''}
+      </tbody>
+    </table>`;
 }
 
 function setSortArticles(mode) {
