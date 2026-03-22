@@ -126,7 +126,7 @@ function pctMap(row) {
 
 function parseOPiU(data) {
   const revenueRow   = findRow(data, 'Выручка');
-  const varExpRow    = findRow(data, 'Переменные расходы');
+  const varExpRow    = findRow(data, 'Переменные');
   const margRow      = findRow(data, 'Маржинальный доход');
   const margPctRow   = findRow(data, 'Рентабельность по маржинальному доходу, %');
   const fixedRow     = findRow(data, 'Прямые постоянные');
