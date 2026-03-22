@@ -20,6 +20,22 @@ const STORE_NAMES = [
 const STORE_COLS = [2, 3, 4, 5, 6, 7, 8, 9];
 const TOTAL_COL  = 12;
 
+// Константы для opiu endpoint (включают Online Продажи)
+const OPIU_ALL_STORE_NAMES = [
+  'Магазин Астана', 'Магазин Above Астана', 'Магазин Мира',
+  'Магазин Есентай', 'Магазин Абайка', 'Магазин Above',
+  'Магазин Восход', 'Магазин Kaspi', 'Online Продажи'
+];
+const OPIU_ALL_COLS = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const OPIU_GROUP_LABELS = [
+  'Выручка',
+  'Переменные',
+  'Маржинальный доход',
+  'Прямые постоянные',
+  'Валовая прибыль по направлениям'
+];
+
 // ═══════════════════ ENTRY POINT ═════════════════
 function doGet(e) {
   // Роутинг: ?action=dds → ДДС endpoint (логика в dds.gs)
@@ -29,6 +45,9 @@ function doGet(e) {
   // Роутинг: ?action=dds_balance → суммы по месяцам для расчёта остатков
   if (e && e.parameter && e.parameter.action === 'dds_balance') {
     return doGetDDSBalance();
+  }
+  if (e && e.parameter && e.parameter.action === 'opiu') {
+    return doGetOPiU(e);
   }
 
   try {
@@ -247,4 +266,65 @@ function buildDynamics(opiuSS, factRaw, currentMonth) {
   }
 
   return dynamics;
+}
+
+// ═══════════════════ ОПиУ TABLE ENDPOINT ═════════════
+function doGetOPiU(e) {
+  try {
+    const month = parseInt((e && e.parameter && e.parameter.month) || (new Date().getMonth() + 1));
+    if (isNaN(month) || month < 1 || month > 12) throw new Error('Некорректный номер месяца');
+    const data = getOPiUTableData(month);
+    return buildResponse(JSON.stringify({ ok: true, data: data }));
+  } catch (err) {
+    return buildResponse(JSON.stringify({ ok: false, error: err.message }));
+  }
+}
+
+function getOPiUTableData(month) {
+  // OPIU_ID — существующая константа в dashboard.gs (строка ~11)
+  var ss = SpreadsheetApp.openById(OPIU_ID);
+  var sheet = ss.getSheetByName(String(month));
+  if (!sheet) throw new Error('Лист ' + month + ' не найден в ОПиУ');
+
+  var raw = sheet.getRange('A1:M200').getValues();
+  var rows = [];
+  var currentParent = null;
+
+  // Пропускаем row 0 (заголовок)
+  for (var i = 1; i < raw.length; i++) {
+    var label = String(raw[i][1]).trim();
+    if (!label) continue;
+
+    var isGroup = OPIU_GROUP_LABELS.indexOf(label) !== -1;
+
+    // Собираем значения по всем магазинам + Итого
+    var values = {};
+    var hasNonZero = false;
+    for (var j = 0; j < OPIU_ALL_STORE_NAMES.length; j++) {
+      var v = parseNum(raw[i][OPIU_ALL_COLS[j]]);
+      values[OPIU_ALL_STORE_NAMES[j]] = v;
+      if (v !== 0) hasNonZero = true;
+    }
+    var totalVal = parseNum(raw[i][TOTAL_COL]);
+    values['Итого'] = totalVal;
+    if (totalVal !== 0) hasNonZero = true;
+
+    if (isGroup) {
+      // Групповые строки ВСЕГДА добавляем, даже если все значения = 0
+      currentParent = label;
+      rows.push({ label: label, type: 'group', parent: null, values: values });
+    } else if (hasNonZero) {
+      // Подстатьи пропускаем только если все нули
+      rows.push({ label: label, type: 'item', parent: currentParent, values: values });
+    }
+    // Иначе — пропускаем строку (пустые разделители)
+  }
+
+  if (rows.length === 0) throw new Error('Нет данных в листе ' + month);
+
+  return {
+    month: month,
+    stores: OPIU_ALL_STORE_NAMES,
+    rows: rows
+  };
 }
