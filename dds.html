@@ -1166,10 +1166,10 @@ function fmt(n) {
   return new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(n) + ' ₸';
 }
 function fmtShort(n) {
-  if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(0) + 'K';
-  return String(n);
+  if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(1) + ' млрд';
+  if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + ' млн';
+  if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(0) + ' тыс';
+  return String(Math.round(n));
 }
 function truncate(s, max) { return s.length > max ? s.slice(0, max) + '…' : s; }
 function escHtml(s) {
