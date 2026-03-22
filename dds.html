@@ -1052,7 +1052,9 @@ function renderMatrixTable() {
     });
   });
 
-  const incomeArticles = Object.entries(incomeMap).sort((a, b) => b[1].total - a[1].total);
+  const incomeArticles = sortIncomeArticles(
+    Object.entries(incomeMap).map(([name, data]) => [name, data.total])
+  ).map(([name]) => [name, incomeMap[name]]);
   const expenseArticles = Object.entries(expenseMap).sort((a, b) => b[1].total - a[1].total);
 
   const loadingMonths = months.filter(m => allMonthsLoaded[m] === 'loading');
