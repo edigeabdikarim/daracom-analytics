@@ -313,10 +313,6 @@
               <button class="sort-btn active" id="expTabList" onclick="setExpensesTab('list')">По статьям</button>
               <button class="sort-btn" id="expTabTable" onclick="setExpensesTab('table')">Таблица</button>
             </div>
-            <div id="expSortBtns" class="flex gap-1">
-              <button class="sort-btn active" id="sortByAmount" onclick="setSortArticles('amount')">По сумме</button>
-              <button class="sort-btn" id="sortByAlpha" onclick="setSortArticles('alpha')">По алфавиту</button>
-            </div>
           </div>
         </div>
         <!-- Sub-tab: По статьям -->
@@ -1055,7 +1051,7 @@ function closeDrill() {
 
 // ─── EXPENSES SECTION CONTROL ─────────────────────────
 function renderExpensesSection() {
-  if (expensesTab === 'list') renderExpandableList();
+  if (expensesTab === 'list') renderArticlesTable();
   else renderMatrixTable();
 }
 
@@ -1063,11 +1059,10 @@ function setExpensesTab(tab) {
   expensesTab = tab;
   document.getElementById('expTabList').classList.toggle('active', tab === 'list');
   document.getElementById('expTabTable').classList.toggle('active', tab === 'table');
-  document.getElementById('expSortBtns').style.display = tab === 'list' ? '' : 'none';
   document.getElementById('expSubList').style.display = tab === 'list' ? '' : 'none';
   document.getElementById('expSubTable').style.display = tab === 'table' ? '' : 'none';
   if (tab === 'table') { loadAllMonths(); renderMatrixTable(); }
-  else renderExpandableList();
+  else renderArticlesTable();
 }
 
 // ─── LOAD ALL MONTHS ──────────────────────────────────
@@ -1105,7 +1100,7 @@ function loadAllMonths() {
 
 function _refreshAfterMonthLoad() {
   if (expensesTab === 'table') { renderMatrixTable(); return; }
-  if (Object.keys(expandedArticles).length) renderExpandableList();
+  renderArticlesTable();
 }
 
 // ─── MATRIX TABLE ─────────────────────────────────────
