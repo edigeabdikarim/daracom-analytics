@@ -1057,6 +1057,9 @@ function renderMatrixTable() {
   const expenseArticles = Object.entries(expenseMap).sort((a, b) => b[1].total - a[1].total);
 
   const loadingMonths = months.filter(m => allMonthsLoaded[m] === 'loading');
+  const filterNote = `<div style="padding:8px 16px;font-size:11px;color:#92400E;border-bottom:1px solid #FDE68A;background:#FFFBEB;display:flex;align-items:center;gap:6px">
+    <span style="color:#F59E0B;font-size:13px">ℹ</span> Таблица показывает данные всех месяцев без учёта фильтров сайдбара
+  </div>`;
   const loadingNote = loadingMonths.length
     ? `<div style="padding:8px 16px;font-size:11px;color:#9CA3AF;border-bottom:1px solid #E5E7EB;background:#F9FAFB">Загрузка: ${loadingMonths.map(m => mNames[m-1]).join(', ')}…</div>`
     : '';
@@ -1090,7 +1093,7 @@ function renderMatrixTable() {
       </tr>`;
   };
 
-  wrap.innerHTML = loadingNote + `
+  wrap.innerHTML = filterNote + loadingNote + `
     <table class="matrix-tbl">
       <thead><tr>
         <th style="text-align:left">Статья</th>
