@@ -679,6 +679,33 @@ function getStoreBreakdown(rows, articleName, type) {
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
 }
 
+// Сортировка статей поступлений: приоритетные — первыми, остальные — по убыванию суммы
+function sortIncomeArticles(articles) {
+  const priority = INCOME_ARTICLE_PRIORITY;
+  return [
+    ...priority
+      .map(name => articles.find(([n]) => n.trim() === name.trim()))
+      .filter(Boolean),
+    ...articles
+      .filter(([n]) => !priority.includes(n.trim()))
+      .sort((a, b) => b[1] - a[1])
+  ];
+}
+
+// Суммы по направлениям для конкретной статьи (аналог getStoreBreakdown)
+function getDirectionBreakdown(rows, articleName, type) {
+  const map = {};
+  rows.forEach(r => {
+    if (r.activity === 'Техническая операция') return;
+    if (type === 'income' && r.type !== 'Поступление') return;
+    if (type === 'expense' && (r.type !== 'Выбытие' || r.activity !== 'Операционная' || r.direction === 'Операция')) return;
+    if (r.article !== articleName) return;
+    const d = r.direction || 'Прочее';
+    map[d] = (map[d] || 0) + Math.abs(r.amount);
+  });
+  return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
 function buildExpandBody(name, type) {
   const color = type === 'income' ? '#10B981' : '#EF4444';
   const months = Array.from({length: currentMonth}, (_, i) => i + 1);
