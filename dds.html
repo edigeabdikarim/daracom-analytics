@@ -376,15 +376,12 @@
 let allRows = [];
 let filteredRows = [];
 let currentMonth = new Date().getMonth() + 1;
-let articleSortMode = 'amount';
 let chartTop5Instance = null;
 let chartDaysInstance = null;
 let monthlyBalance = null; // { "1": { incoming, outgoing }, ... } — данные по всем месяцам
 let allMonthsData = {};    // { month: rows[] } — сырые строки по каждому месяцу
 let allMonthsLoaded = {};  // { month: 'loading'|'done'|'error' }
-let expandedArticles = {}; // { 'income::name' | 'expense::name': true }
 let expensesTab = 'list';  // 'list' | 'table'
-let _artItems = [];        // [{keyStr, name, type}] — порядок статей в текущем рендере
 
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                      'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -711,75 +708,6 @@ function getDirectionBreakdown(rows, articleName, type) {
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
 }
 
-function buildExpandBody(name, type) {
-  const color = type === 'income' ? '#10B981' : '#EF4444';
-  const months = Array.from({length: currentMonth}, (_, i) => i + 1);
-  const mNames = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
-
-  const vals = months.map(m => {
-    const rows = allMonthsData[m] || [];
-    return rows.reduce((s, r) => {
-      if (r.activity === 'Техническая операция') return s;
-      if (type === 'income' && r.type !== 'Поступление') return s;
-      if (type === 'expense' && (r.type !== 'Выбытие' || r.activity !== 'Операционная' || r.direction === 'Операция')) return s;
-      if (r.article !== name) return s;
-      return s + Math.abs(r.amount);
-    }, 0);
-  });
-
-  const maxVal = Math.max(...vals, 1);
-
-  const chartHtml = `
-    <div style="margin-bottom: 16px;">
-      <div style="font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Динамика по месяцам</div>
-      <div class="mini-bars">
-        ${months.map((m, i) => {
-          const val = vals[i];
-          const isLoading = !allMonthsData[m] && allMonthsLoaded[m] === 'loading';
-          const h = maxVal > 0 && val > 0 ? Math.max(Math.round(val / maxVal * 44), 3) : 2;
-          const bg = isLoading ? '#E5E7EB' : (val === 0 ? '#F3F4F6' : color);
-          return `<div class="mini-bar-col">
-            <div class="mini-bar-val">${val > 0 ? fmtShort(val) : (isLoading ? '…' : '')}</div>
-            <div style="flex:1;display:flex;align-items:flex-end;width:100%">
-              <div class="mini-bar-fill" style="height:${h}px;background:${bg};width:100%"></div>
-            </div>
-            <div class="mini-bar-lbl">${mNames[m-1]}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-
-  const stores = getStoreBreakdown(filteredRows, name, type);
-  const storeTotal = stores.reduce((s, [,a]) => s + a, 0);
-  const storeHtml = stores.length ? `
-    <div>
-      <div style="font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">По магазинам — ${mNames[currentMonth-1]}</div>
-      ${stores.map(([store, amt]) => {
-        const pct = storeTotal > 0 ? Math.round(amt / storeTotal * 100) : 0;
-        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0">
-          <div style="width:90px;font-size:12px;color:#374151;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(store)}</div>
-          <div style="flex:1;height:4px;background:#F3F4F6;border-radius:2px;min-width:40px">
-            <div style="height:4px;width:${pct}%;background:${color};border-radius:2px"></div>
-          </div>
-          <div style="font-size:12px;font-weight:700;color:${color};white-space:nowrap;text-align:right;min-width:90px">${fmt(amt)}</div>
-        </div>`;
-      }).join('')}
-    </div>` : '';
-
-  return chartHtml + storeHtml;
-}
-
-function toggleExpandArticle(idx) {
-  const { keyStr, name, type } = _artItems[idx];
-  if (expandedArticles[keyStr]) {
-    delete expandedArticles[keyStr];
-  } else {
-    expandedArticles[keyStr] = true;
-    loadAllMonths();
-  }
-  renderExpandableList();
-}
-
 function renderArticlesTable() {
   const incomeArticles = sortIncomeArticles(getIncomeArticles(filteredRows));
   const expenseArticles = getArticlesData(filteredRows); // уже отсортированы по сумме
@@ -872,13 +800,6 @@ function renderArticlesTable() {
         ` : ''}
       </tbody>
     </table>`;
-}
-
-function setSortArticles(mode) {
-  articleSortMode = mode;
-  document.getElementById('sortByAmount').classList.toggle('active', mode === 'amount');
-  document.getElementById('sortByAlpha').classList.toggle('active', mode === 'alpha');
-  renderExpandableList();
 }
 
 // ─── STORE GRID ───────────────────────────────────────
