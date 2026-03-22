@@ -20,7 +20,8 @@ const STORE_NAMES = [
 const STORE_COLS = [2, 3, 4, 5, 6, 7, 8, 9];
 const TOTAL_COL  = 12;
 
-// Константы для opiu endpoint (включают Online Продажи)
+// Константы для opiu endpoint (включают Online Продажи).
+// Намеренно отдельный список от STORE_NAMES: добавлен Online (col 10) и не ломает dashboard-логику
 const OPIU_ALL_STORE_NAMES = [
   'Магазин Астана', 'Магазин Above Астана', 'Магазин Мира',
   'Магазин Есентай', 'Магазин Абайка', 'Магазин Above',
@@ -286,7 +287,8 @@ function getOPiUTableData(month) {
   var sheet = ss.getSheetByName(String(month));
   if (!sheet) throw new Error('Лист ' + month + ' не найден в ОПиУ');
 
-  var raw = sheet.getRange('A1:M200').getValues();
+  var lastRow = sheet.getLastRow();
+  var raw = sheet.getRange(1, 1, lastRow, 13).getValues();
   var rows = [];
   var currentParent = null;
 
