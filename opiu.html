@@ -156,15 +156,15 @@
     loadData();
   }
 
-  function refreshData() {
-    localStorage.removeItem(cacheKey(currentMonth));
-    loadData(true);
-  }
-
   // ─── CACHE ─────────────────────────────────────
   // Включаем год чтобы январь 2027 не вернул данные января 2026
   const CACHE_YEAR = new Date().getFullYear();
   function cacheKey(m) { return 'daracom_opiu_' + CACHE_YEAR + '_' + m; }
+
+  function refreshData() {
+    localStorage.removeItem(cacheKey(currentMonth));
+    loadData(true);
+  }
 
   function loadFromCache(m) {
     try {
@@ -242,7 +242,7 @@
     // Header subtitle
     const d = new Date(ts);
     const hhmm = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-    document.getElementById('headerSub').textContent = MONTH_NAMES[data.month] + ' 2026 · данные от ' + hhmm;
+    document.getElementById('headerSub').textContent = MONTH_NAMES[data.month] + ' ' + CACHE_YEAR + ' · данные от ' + hhmm;
 
     // Build revenue map: store → revenue value (for % calc)
     const revenueMap = {};
@@ -282,10 +282,15 @@
         return '<td><span class="cell-dash">—</span></td>';
       }
 
+      // Если выручка по этой колонке = 0, показываем прочерк (нет базы для расчёта %)
+      if (!noPercent && rev === 0) {
+        return '<td><span class="cell-dash">—</span></td>';
+      }
+
       const fmtVal = fmtShort(val);
       let pctHtml = '';
 
-      if (!noPercent && rev && rev !== 0) {
+      if (!noPercent && rev !== 0) {
         const pct = (val / rev * 100).toFixed(1);
         pctHtml = '<div class="cell-pct">(' + pct + '%)</div>';
       }
