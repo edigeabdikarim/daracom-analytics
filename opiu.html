@@ -270,6 +270,7 @@
 
   function renderRow(row, cols, revenueMap) {
     const isGroup = row.type === 'group';
+    const isPct = !!row.pct;
     const noPercent = row.label === 'Выручка' || row.parent === 'Выручка';
     const bgCls = isGroup ? (GROUP_BG[row.label] || '') : '';
     const rowCls = (isGroup ? 'pl-row-group ' + bgCls : 'pl-row-item');
@@ -280,6 +281,13 @@
 
       if (val === undefined || val === null || val === 0) {
         return '<td><span class="cell-dash">—</span></td>';
+      }
+
+      // Строки рентабельности: значения — дроби (0.317 = 31.7%), показываем как %
+      if (isPct) {
+        const pctStr = (val * 100).toFixed(1) + '%';
+        const color = val < 0 ? '#EF4444' : '#10B981';
+        return '<td><div class="cell-val" style="color:' + color + '">' + pctStr + '</div></td>';
       }
 
       // Если выручка по этой колонке = 0, показываем прочерк (нет базы для расчёта %)

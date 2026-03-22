@@ -315,6 +315,9 @@ function getOPiUTableData(month) {
 
     var isGroup = OPIU_GROUP_LABELS.indexOf(label) !== -1;
     var isMerged = !!storeMergedRows[i];
+    // Строки с % в метке (напр. "Рентабельность...%") содержат дробные значения (0.317 = 31.7%),
+    // а не суммы в тенге — помечаем флагом для корректного форматирования на фронтенде
+    var isPct = label.indexOf('%') !== -1;
 
     // Собираем значения по всем магазинам + Итого.
     // Для объединённых строк: store values = null (нет побочных данных),
@@ -333,10 +336,10 @@ function getOPiUTableData(month) {
     if (isGroup) {
       // Групповые строки ВСЕГДА добавляем, даже если все значения = 0
       currentParent = label;
-      rows.push({ label: label, type: 'group', parent: null, values: values, merged: isMerged });
+      rows.push({ label: label, type: 'group', parent: null, values: values, merged: isMerged, pct: isPct });
     } else if (hasNonZero) {
       // Подстатьи пропускаем только если все нули
-      rows.push({ label: label, type: 'item', parent: currentParent, values: values, merged: isMerged });
+      rows.push({ label: label, type: 'item', parent: currentParent, values: values, merged: isMerged, pct: isPct });
     }
     // Иначе — пропускаем строку (пустые разделители)
   }
