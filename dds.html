@@ -1281,6 +1281,25 @@ function renderSummaryMatrix() {
   wrap.innerHTML = html;
 }
 
+function toggleSummaryZeros() {
+  const hide = document.getElementById('summaryHideZeros').checked;
+  // Скрыть/показать нулевые строки статей
+  document.querySelectorAll('#summaryWrap tr.sma-row[data-zero="1"]').forEach(tr => {
+    tr.style.display = hide ? 'none' : '';
+  });
+  // Скрыть/показать нулевые строки групп (если все дочерние нулевые)
+  document.querySelectorAll('#summaryWrap tr.smg-row').forEach(grpTr => {
+    // Ищем все следующие sma-row до следующего smg-row
+    let hasVisible = false;
+    let el = grpTr.nextElementSibling;
+    while (el && el.classList.contains('sma-row')) {
+      if (el.dataset.zero !== '1' || el.style.display !== 'none') { hasVisible = true; break; }
+      el = el.nextElementSibling;
+    }
+    grpTr.style.display = (hide && !hasVisible) ? 'none' : '';
+  });
+}
+
 // ─── MATRIX TABLE ─────────────────────────────────────
 function renderMatrixTable() {
   const wrap = document.getElementById('matrixWrap');
