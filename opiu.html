@@ -37,36 +37,64 @@
 
     /* ── P&L Table ── */
     .pl-wrap { overflow-x: auto; background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; }
-    .pl-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+    .pl-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 960px; }
+
+    /* Header */
     .pl-table th {
       padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 700;
       color: #6B7280; text-transform: uppercase; letter-spacing: 0.04em;
       border-bottom: 2px solid #E5E7EB; background: #F9FAFB;
       white-space: nowrap; position: sticky; top: 0; z-index: 2;
     }
-    .pl-table th:first-child { text-align: left; position: sticky; left: 0; z-index: 3; background: #F9FAFB; min-width: 200px; }
-    .pl-table td { padding: 8px 14px; border-bottom: 1px solid #F3F4F6; vertical-align: top; }
+    .pl-table th:first-child { text-align: left; position: sticky; left: 0; z-index: 3; background: #F9FAFB; min-width: 220px; }
+    .pl-table th.th-total {
+      background: #F0FDF4; color: #065F46;
+      border-left: 2px solid #D1FAE5; border-right: 2px solid #D1FAE5;
+    }
+
+    /* Cells */
+    .pl-table td { padding: 8px 14px; border-bottom: 1px solid #E5E7EB; vertical-align: top; text-align: right; white-space: nowrap; }
     .pl-table td:first-child {
       text-align: left; position: sticky; left: 0; background: #fff; z-index: 1;
-      font-weight: 500; white-space: nowrap;
+      font-weight: 500; white-space: nowrap; vertical-align: middle;
     }
-    .pl-table td:not(:first-child) { text-align: right; white-space: nowrap; }
+    .pl-table td.td-total {
+      border-left: 2px solid #D1FAE5; border-right: 2px solid #D1FAE5;
+    }
 
     /* Group rows */
-    .pl-row-group td { font-weight: 700; font-size: 13px; border-top: 2px solid #E5E7EB; }
-    .pl-row-group td:first-child { font-weight: 700; }
-    .bg-income td { background: rgba(16,185,129,0.08); }
-    .bg-income td:first-child { background: rgba(16,185,129,0.08); }
-    .bg-expense td { background: rgba(239,68,68,0.08); }
-    .bg-expense td:first-child { background: rgba(239,68,68,0.08); }
+    .pl-row-group td { font-weight: 700; font-size: 13px; border-top: 3px solid #D1D5DB; }
+    .bg-income td { background: #ECFDF5; color: #065F46; }
+    .bg-income td:first-child { background: #ECFDF5; }
+    .bg-income td.td-total { background: #D1FAE5; }
+    .bg-expense td { background: #FEF2F2; color: #991B1B; }
+    .bg-expense td:first-child { background: #FEF2F2; }
+    .bg-expense td.td-total { background: #FEE2E2; }
 
     /* Item rows */
-    .pl-row-item td:first-child { padding-left: 28px; font-size: 12px; font-weight: 400; color: #374151; }
+    .pl-row-item td { background: #fff; }
+    .pl-row-item td:first-child { padding-left: 28px; font-size: 12px; font-weight: 400; color: #374151; vertical-align: middle; }
     .pl-row-item td:not(:first-child) { font-size: 12px; }
+    .pl-row-item td.td-total { background: #F0FDF4; color: #065F46; font-weight: 600; }
 
-    /* Value cell */
+    /* Network (merged) group rows */
+    .pl-row-net-group td { font-weight: 700; font-size: 13px; border-top: 3px solid #D1D5DB; background: #FFFBEB; color: #92400E; }
+    .pl-row-net-group td:first-child { background: #FFFBEB; }
+    .pl-row-net-group td.td-total { background: #FEF3C7; border-left: 2px solid #FDE68A; border-right: 2px solid #FDE68A; }
+    .pl-row-net-group td.td-net-span { background: #FFFDE7; border-left: 3px dashed #F59E0B; border-right: 3px dashed #F59E0B; text-align: center; color: #B45309; }
+
+    /* Network (merged) item rows */
+    .pl-row-net-item td { background: #FFFEF7; }
+    .pl-row-net-item td:first-child { background: #FFFEF7; padding-left: 28px; font-size: 12px; font-weight: 400; color: #374151; vertical-align: middle; }
+    .pl-row-net-item td:not(:first-child) { font-size: 12px; }
+    .pl-row-net-item td.td-total { background: #FFFDE7; color: #92400E; font-weight: 600; border-left: 2px solid #FDE68A; border-right: 2px solid #FDE68A; }
+    .pl-row-net-item td.td-net-span { background: #FFFEF5; border-left: 3px dashed #FDE68A; border-right: 3px dashed #FDE68A; text-align: center; color: #B45309; font-size: 12px; }
+
+    /* Value + pct cells */
     .cell-val { font-weight: 600; }
-    .cell-pct { font-size: 11px; color: #9CA3AF; margin-top: 1px; }
+    .cell-pct { font-size: 10px; color: #9CA3AF; margin-top: 1px; }
+    .cell-pct-total { font-size: 10px; color: #6EE7B7; margin-top: 1px; }
+    .cell-pct-net { font-size: 10px; color: #D97706; margin-top: 1px; }
     .cell-dash { color: #D1D5DB; }
   </style>
 </head>
@@ -80,7 +108,6 @@
     };
     const MONTH_NAMES = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
                           'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-    // Цвет фона группового ряда (статичный, по метке)
     const GROUP_BG = {
       'Выручка': 'bg-income',
       'Переменные': 'bg-expense',
@@ -88,6 +115,8 @@
       'Прямые постоянные': 'bg-expense',
       'Валовая прибыль по направлениям': 'bg-income',
     };
+    // Строки выручки — не показываем % (сами являются базой)
+    const NO_PCT_LABELS = new Set(['Выручка']);
   </script>
 
   <!-- ═══ HEADER ═══ -->
@@ -157,7 +186,6 @@
   }
 
   // ─── CACHE ─────────────────────────────────────
-  // Включаем год чтобы январь 2027 не вернул данные января 2026
   const CACHE_YEAR = new Date().getFullYear();
   function cacheKey(m) { return 'daracom_opiu_' + CACHE_YEAR + '_' + m; }
 
@@ -208,7 +236,6 @@
   }
 
   // ─── STATES ────────────────────────────────────
-  // Element IDs: stateLoading, stateError, stateEmpty, stateContent
   function setState(s) {
     ['loading','error','empty','content'].forEach(id => {
       const el = document.getElementById('state' + id.charAt(0).toUpperCase() + id.slice(1));
@@ -244,7 +271,7 @@
     const hhmm = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
     document.getElementById('headerSub').textContent = MONTH_NAMES[data.month] + ' ' + CACHE_YEAR + ' · данные от ' + hhmm;
 
-    // Build revenue map: store → revenue value (for % calc)
+    // Build revenue map: store → revenue value (for % calc per store)
     const revenueMap = {};
     const revRow = data.rows.find(r => r.label === 'Выручка');
     if (revRow) {
@@ -252,13 +279,14 @@
       revenueMap['Итого'] = revRow.values['Итого'] || 0;
     }
 
-    const cols = [...data.stores, 'Итого'];
+    const cols = [...data.stores]; // без Итого — он отдельно вторым
 
-    // Render thead
+    // Render thead: Метрика | Итого | store1 | store2 | ...
     const thead = document.getElementById('plHead');
     thead.innerHTML = '<tr>' +
       '<th>Метрика</th>' +
-      cols.map(s => '<th>' + s.replace('Магазин ', '') + '</th>').join('') +
+      '<th class="th-total">Итого</th>' +
+      cols.map(s => '<th>' + escHtml(s.replace('Магазин ', '')) + '</th>').join('') +
       '</tr>';
 
     // Render tbody
@@ -269,44 +297,85 @@
   }
 
   function renderRow(row, cols, revenueMap) {
-    const isGroup = row.type === 'group';
-    const isPct = !!row.pct;
-    const noPercent = row.label === 'Выручка' || row.parent === 'Выручка';
-    const bgCls = isGroup ? (GROUP_BG[row.label] || '') : '';
-    const rowCls = (isGroup ? 'pl-row-group ' + bgCls : 'pl-row-item');
+    const isGroup   = row.type === 'group';
+    const isMerged  = !!row.merged;
+    const isPct     = !!row.pct;
+    const noPercent = NO_PCT_LABELS.has(row.label) || row.parent === 'Выручка';
 
-    const cells = cols.map(col => {
+    const bgCls  = isGroup ? (GROUP_BG[row.label] || '') : '';
+    const isNetGroup = isMerged && isGroup;
+    const isNetItem  = isMerged && !isGroup;
+
+    let rowCls;
+    if (isNetGroup)       rowCls = 'pl-row-net-group';
+    else if (isNetItem)   rowCls = 'pl-row-net-item';
+    else if (isGroup)     rowCls = 'pl-row-group ' + bgCls;
+    else                  rowCls = 'pl-row-item';
+
+    // ── Итого cell ──
+    const totalVal = row.values['Итого'];
+    const totalRevenue = revenueMap['Итого'] || 0;
+    const totalCell = buildCell(totalVal, totalRevenue, noPercent, isPct, true, isMerged);
+    const totalTd = '<td class="td-total">' + totalCell + '</td>';
+
+    if (isMerged) {
+      // Merged rows: colspan по всем магазинам
+      const spanVal  = totalVal !== null && totalVal !== undefined && totalVal !== 0 ? fmtShort(totalVal) : '';
+      const spanPct  = (!noPercent && totalRevenue > 0 && totalVal)
+        ? '<div class="cell-pct-net">(' + (totalVal / totalRevenue * 100).toFixed(1) + '%)</div>'
+        : '';
+      const spanContent = spanVal
+        ? '<div class="cell-val">' + spanVal + '</div>' + spanPct
+        : '';
+      const spanTd = '<td class="td-net-span" colspan="' + cols.length + '">' + spanContent + '</td>';
+
+      return '<tr class="' + rowCls + '">' +
+        '<td>' + escHtml(row.label) + '</td>' +
+        totalTd +
+        spanTd +
+        '</tr>';
+    }
+
+    // Normal rows: individual store cells
+    const storeCells = cols.map(col => {
       const val = row.values[col];
-      const rev = revenueMap[col];
-
-      if (val === undefined || val === null || val === 0) {
-        return '<td><span class="cell-dash">—</span></td>';
-      }
-
-      // Строки рентабельности: значения — дроби (0.317 = 31.7%), показываем как %
-      if (isPct) {
-        const pctStr = (val * 100).toFixed(1) + '%';
-        const color = val < 0 ? '#EF4444' : '#10B981';
-        return '<td><div class="cell-val" style="color:' + color + '">' + pctStr + '</div></td>';
-      }
-
-      // Если выручка по этой колонке = 0, показываем прочерк (нет базы для расчёта %)
-      if (!noPercent && rev === 0) {
-        return '<td><span class="cell-dash">—</span></td>';
-      }
-
-      const fmtVal = fmtShort(val);
-      let pctHtml = '';
-
-      if (!noPercent && rev !== 0) {
-        const pct = (val / rev * 100).toFixed(1);
-        pctHtml = '<div class="cell-pct">(' + pct + '%)</div>';
-      }
-
-      return '<td><div class="cell-val">' + fmtVal + '</div>' + pctHtml + '</td>';
+      const rev = revenueMap[col] || 0;
+      return '<td>' + buildCell(val, rev, noPercent, isPct, false, false) + '</td>';
     }).join('');
 
-    return '<tr class="' + rowCls + '"><td>' + escHtml(row.label) + '</td>' + cells + '</tr>';
+    return '<tr class="' + rowCls + '">' +
+      '<td>' + escHtml(row.label) + '</td>' +
+      totalTd +
+      storeCells +
+      '</tr>';
+  }
+
+  function buildCell(val, rev, noPercent, isPct, isTotal, isMerged) {
+    if (val === undefined || val === null || val === 0) {
+      return '<span class="cell-dash">—</span>';
+    }
+
+    // % строки (Рентабельность)
+    if (isPct) {
+      const pctStr = (val * 100).toFixed(1) + '%';
+      const color  = val < 0 ? '#EF4444' : '#10B981';
+      return '<div class="cell-val" style="color:' + color + '">' + pctStr + '</div>';
+    }
+
+    const fmtVal = fmtShort(val);
+
+    if (noPercent) {
+      return '<div class="cell-val">' + fmtVal + '</div>';
+    }
+
+    if (rev === 0) {
+      return '<span class="cell-dash">—</span>';
+    }
+
+    const pct = (val / rev * 100).toFixed(1);
+    const pctCls = isTotal ? 'cell-pct-total' : 'cell-pct';
+    return '<div class="cell-val">' + fmtVal + '</div>' +
+           '<div class="' + pctCls + '">(' + pct + '%)</div>';
   }
 
   function escHtml(s) {

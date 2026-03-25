@@ -334,14 +334,12 @@ function getOPiUTableData(month) {
     if (totalVal !== 0) hasNonZero = true;
 
     if (isGroup) {
-      // Групповые строки ВСЕГДА добавляем, даже если все значения = 0
       currentParent = label;
       rows.push({ label: label, type: 'group', parent: null, values: values, merged: isMerged, pct: isPct });
-    } else if (hasNonZero) {
-      // Подстатьи пропускаем только если все нули
+    } else {
+      // Показываем все строки с лейблом (пропускаем только строки без лейбла)
       rows.push({ label: label, type: 'item', parent: currentParent, values: values, merged: isMerged, pct: isPct });
     }
-    // Иначе — пропускаем строку (пустые разделители)
   }
 
   if (rows.length === 0) throw new Error('Нет данных в листе ' + month);
