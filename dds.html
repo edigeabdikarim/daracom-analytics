@@ -248,6 +248,9 @@
       <div class="nav-item" onclick="setSection('expenses')" id="nav-expenses">
         <span class="nav-icon">💸</span> Куда ушли
       </div>
+      <div class="nav-item" onclick="setSection('summary')" id="nav-summary">
+        <span class="nav-icon">📋</span> Сводная
+      </div>
       <div class="nav-item" onclick="setSection('stores')" id="nav-stores">
         <span class="nav-icon">🏪</span> По магазинам
       </div>
@@ -345,13 +348,27 @@
         </div>
       </div>
 
-      <!-- ── РАЗДЕЛ 3: ПО МАГАЗИНАМ ── -->
+      <!-- ── РАЗДЕЛ 3: СВОДНАЯ ── -->
+      <div class="section" id="section-summary">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title" style="margin-bottom:0">Сводная по статьям и магазинам</h2>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6B7280;cursor:pointer;">
+            <input type="checkbox" id="summaryHideZeros" checked onchange="toggleSummaryZeros()" style="accent-color:#10B981;">
+            Скрыть нулевые
+          </label>
+        </div>
+        <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;overflow-x:auto;" id="summaryWrap">
+          <p style="padding:24px;color:#9CA3AF;text-align:center;">Выберите месяц для загрузки данных</p>
+        </div>
+      </div>
+
+      <!-- ── РАЗДЕЛ 4: ПО МАГАЗИНАМ ── -->
       <div class="section" id="section-stores">
         <h2 class="section-title">По магазинам</h2>
         <div class="store-grid" id="storeGrid"></div>
       </div>
 
-      <!-- ── РАЗДЕЛ 4: ПО ДНЯМ ── -->
+      <!-- ── РАЗДЕЛ 5: ПО ДНЯМ ── -->
       <div class="section" id="section-days">
         <h2 class="section-title">Деньги по дням</h2>
         <div class="card">
