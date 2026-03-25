@@ -1140,6 +1140,82 @@ const DDS_ARTICLES_ORDER = [
   { article: 'Выдача кредитов и займов',                     group: 'ОС (расходы)',               isIncome: false },
 ];
 
+// buildSummaryData(rows) → { stores[], groups[] }
+// groups[i] = { name, isIncome, articles[{ name, byStore, total }], subtotals }
+function buildSummaryData(rows) {
+  // Строим индекс хардкодных статей
+  const articleMeta = {};
+  DDS_ARTICLES_ORDER.forEach(a => { articleMeta[a.article] = a; });
+
+  // Собираем данные: cellData[article][store] = sum
+  const cellData = {};
+  const storeTurnover = {}; // для сортировки магазинов
+
+  rows.forEach(r => {
+    if (r.activity === 'Техническая операция') return;
+    if (r.direction === 'Операция') return;
+    const art = r.article && r.article.trim() ? r.article.trim() : 'Прочее';
+    const store = r.store && r.store.trim() ? r.store.trim() : 'Общее';
+    const amt = Number(r.amount) || 0;
+
+    if (!cellData[art]) cellData[art] = {};
+    cellData[art][store] = (cellData[art][store] || 0) + amt;
+
+    // оборот = |amount| (независимо от знака)
+    storeTurnover[store] = (storeTurnover[store] || 0) + Math.abs(amt);
+  });
+
+  // Сортировка магазинов: по убыванию оборота, тайбрейкер — алфавит
+  const stores = Object.keys(storeTurnover).sort((a, b) => {
+    const diff = storeTurnover[b] - storeTurnover[a];
+    return diff !== 0 ? diff : a.localeCompare(b, 'ru');
+  });
+
+  // Итого по статье = сумма по всем магазинам
+  const articleTotal = {};
+  Object.keys(cellData).forEach(art => {
+    articleTotal[art] = Object.values(cellData[art]).reduce((s, v) => s + v, 0);
+  });
+
+  // Строим группы из DDS_ARTICLES_ORDER
+  const groupsMap = new Map(); // groupName → { name, isIncome, articleNames[] }
+  DDS_ARTICLES_ORDER.forEach(a => {
+    if (!groupsMap.has(a.group)) {
+      groupsMap.set(a.group, { name: a.group, isIncome: a.isIncome, articleNames: [] });
+    }
+    groupsMap.get(a.group).articleNames.push(a.article);
+  });
+
+  // Статьи не в списке → группа «Прочее»
+  const knownArticles = new Set(DDS_ARTICLES_ORDER.map(a => a.article));
+  const extraArticles = Object.keys(cellData).filter(art => !knownArticles.has(art));
+  if (extraArticles.length > 0) {
+    groupsMap.set('Прочее', { name: 'Прочее', isIncome: null, articleNames: extraArticles });
+  }
+
+  // Формируем выходные группы
+  const groups = [];
+  groupsMap.forEach(g => {
+    const articles = g.articleNames.map(name => {
+      const byStore = {};
+      stores.forEach(s => { byStore[s] = (cellData[name] && cellData[name][s]) || 0; });
+      const total = articleTotal[name] || 0;
+      return { name, byStore, total };
+    });
+
+    // subtotals по магазинам
+    const subtotals = {};
+    stores.forEach(s => {
+      subtotals[s] = articles.reduce((sum, a) => sum + (a.byStore[s] || 0), 0);
+    });
+    const subtotalTotal = articles.reduce((sum, a) => sum + a.total, 0);
+
+    groups.push({ name: g.name, isIncome: g.isIncome, articles, subtotals, subtotalTotal });
+  });
+
+  return { stores, groups };
+}
+
 // ─── MATRIX TABLE ─────────────────────────────────────
 function renderMatrixTable() {
   const wrap = document.getElementById('matrixWrap');
