@@ -1143,10 +1143,6 @@ const DDS_ARTICLES_ORDER = [
 // buildSummaryData(rows) → { stores[], groups[] }
 // groups[i] = { name, isIncome, articles[{ name, byStore, total }], subtotals }
 function buildSummaryData(rows) {
-  // Строим индекс хардкодных статей
-  const articleMeta = {};
-  DDS_ARTICLES_ORDER.forEach(a => { articleMeta[a.article] = a; });
-
   // Собираем данные: cellData[article][store] = sum
   const cellData = {};
   const storeTurnover = {}; // для сортировки магазинов
@@ -1214,6 +1210,75 @@ function buildSummaryData(rows) {
   });
 
   return { stores, groups };
+}
+
+// Рендерит значение ячейки матрицы
+function renderSummaryCell(value) {
+  if (Math.abs(value) < 0.01) return `<span class="sm-zero">—</span>`;
+  if (value > 0) return `<span class="sm-income">${fmt(value)}</span>`;
+  return `<span class="sm-expense">${fmt(value)}</span>`;
+}
+
+function renderSummaryMatrix() {
+  const wrap = document.getElementById('summaryWrap');
+  if (!wrap) return;
+
+  // Проверяем что данные загружены (stateContent visible = hidden class отсутствует)
+  if (document.getElementById('stateContent').classList.contains('hidden')) return;
+  if (!allRows || allRows.length === 0) {
+    wrap.innerHTML = `<p style="padding:24px;color:#9CA3AF;text-align:center;">Нет данных за ${escHtml(MONTH_NAMES[currentMonth - 1])}</p>`;
+    return;
+  }
+
+  const { stores, groups } = buildSummaryData(allRows);
+  const hideZeros = document.getElementById('summaryHideZeros') && document.getElementById('summaryHideZeros').checked;
+
+  let html = `<table class="summary-tbl">`;
+
+  // thead
+  html += `<thead><tr>`;
+  html += `<th>Статья</th>`;
+  html += `<th style="text-align:right">Итого</th>`;
+  stores.forEach(s => {
+    html += `<th>${escHtml(s)}</th>`;
+  });
+  html += `</tr></thead>`;
+
+  // tbody
+  html += `<tbody>`;
+  groups.forEach(g => {
+    const groupCls = g.isIncome === true ? 'sg-income' : g.isIncome === false ? 'sg-expense' : 'sg-neutral';
+
+    // Считаем нулевые строки в группе
+    const nonZeroArticles = g.articles.filter(a => Math.abs(a.total) >= 0.01);
+    const groupIsAllZero = nonZeroArticles.length === 0;
+
+    // Строка заголовка группы
+    const grpHideClass = (hideZeros && groupIsAllZero) ? ' style="display:none"' : '';
+    html += `<tr class="${groupCls} smg-row"${grpHideClass}>`;
+    html += `<td>${escHtml(g.name)}</td>`;
+    html += `<td>${renderSummaryCell(g.subtotalTotal)}</td>`;
+    stores.forEach(s => {
+      html += `<td>${renderSummaryCell(g.subtotals[s] || 0)}</td>`;
+    });
+    html += `</tr>`;
+
+    // Строки статей
+    g.articles.forEach(a => {
+      const isZero = Math.abs(a.total) < 0.01;
+      const rowHideClass = (hideZeros && isZero) ? ' data-zero="1" style="display:none"' : (isZero ? ' data-zero="1"' : '');
+      html += `<tr class="sma-row"${rowHideClass}>`;
+      html += `<td style="padding-left:20px">${escHtml(a.name)}</td>`;
+      html += `<td>${renderSummaryCell(a.total)}</td>`;
+      stores.forEach(s => {
+        html += `<td>${renderSummaryCell(a.byStore[s] || 0)}</td>`;
+      });
+      html += `</tr>`;
+    });
+  });
+  html += `</tbody></table>`;
+
+  wrap.innerHTML = html;
 }
 
 // ─── MATRIX TABLE ─────────────────────────────────────
