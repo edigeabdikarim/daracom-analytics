@@ -571,6 +571,7 @@ function renderAll() {
   renderStoreGrid();
   renderDaysChart();
   renderTop10();
+  renderSummaryMatrix();
 }
 
 // ─── KPI ──────────────────────────────────────────────
@@ -1440,6 +1441,9 @@ function setSection(name) {
   document.getElementById('nav-' + name).classList.add('active');
   closeDrill();
   if (name === 'expenses') loadAllMonths();
+  if (name === 'summary' && !document.getElementById('stateContent').classList.contains('hidden')) {
+    renderSummaryMatrix();
+  }
 }
 
 // ─── UI STATES ────────────────────────────────────────
