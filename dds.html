@@ -1142,7 +1142,7 @@ const DDS_ARTICLES_ORDER = [
 ];
 
 // buildSummaryData(rows) → { stores[], groups[] }
-// groups[i] = { name, isIncome, articles[{ name, byStore, total }], subtotals }
+// groups[i] = { name, isIncome, articles[{ name, byStore, total, isCompanyWide }], subtotals }
 function buildSummaryData(rows) {
   // Собираем данные: cellData[article][store] = sum
   const cellData = {};
