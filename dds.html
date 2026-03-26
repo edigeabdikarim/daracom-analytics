@@ -1234,6 +1234,10 @@ function renderSummaryMatrix() {
   }
 
   const { stores, groups } = buildSummaryData(allRows);
+  if (stores.length === 0) {
+    wrap.innerHTML = `<p style="padding:24px;color:#9CA3AF;text-align:center;">Нет данных по магазинам за ${escHtml(MONTH_NAMES[currentMonth - 1])}</p>`;
+    return;
+  }
   const hideZeros = document.getElementById('summaryHideZeros') && document.getElementById('summaryHideZeros').checked;
 
   let html = `<table class="summary-tbl">`;
@@ -1273,9 +1277,13 @@ function renderSummaryMatrix() {
       html += `<tr class="sma-row"${rowHideClass}>`;
       html += `<td style="padding-left:20px">${escHtml(a.name)}</td>`;
       html += `<td>${renderSummaryCell(a.total)}</td>`;
-      stores.forEach(s => {
-        html += `<td>${renderSummaryCell(a.byStore[s] || 0)}</td>`;
-      });
+      if (a.isCompanyWide) {
+        html += `<td colspan="${stores.length}" style="text-align:center">${renderSummaryCell(a.total)}</td>`;
+      } else {
+        stores.forEach(s => {
+          html += `<td>${renderSummaryCell(a.byStore[s] || 0)}</td>`;
+        });
+      }
       html += `</tr>`;
     });
   });
