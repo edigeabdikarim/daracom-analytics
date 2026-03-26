@@ -1197,7 +1197,9 @@ function buildSummaryData(rows) {
       const byStore = {};
       stores.forEach(s => { byStore[s] = (cellData[name] && cellData[name][s]) || 0; });
       const total = articleTotal[name] || 0;
-      return { name, byStore, total };
+      const keys = Object.keys(cellData[name] || {});
+      const isCompanyWide = keys.length > 0 && keys.every(s => s === 'Компания');
+      return { name, byStore, total, isCompanyWide };
     });
 
     // subtotals по магазинам
