@@ -1162,11 +1162,11 @@ function buildSummaryData(rows) {
     storeTurnover[store] = (storeTurnover[store] || 0) + Math.abs(amt);
   });
 
-  // Сортировка магазинов: по убыванию оборота, тайбрейкер — алфавит
+  // Сортировка магазинов: по убыванию оборота, тайбрейкер — алфавит; «Компания» исключается
   const stores = Object.keys(storeTurnover).sort((a, b) => {
     const diff = storeTurnover[b] - storeTurnover[a];
     return diff !== 0 ? diff : a.localeCompare(b, 'ru');
-  });
+  }).filter(s => s !== 'Компания');
 
   // Итого по статье = сумма по всем магазинам
   const articleTotal = {};
