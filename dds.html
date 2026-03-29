@@ -1173,7 +1173,7 @@ function buildSummaryData(rows) {
     storeTurnover[store] = (storeTurnover[store] || 0) + Math.abs(amt);
   });
 
-  // Фиксированный порядок магазинов; «Компания» исключается
+  // Фиксированный порядок магазинов: DDS_STORES_ORDER в приоритете, неизвестные — в конце алфавитно; «Компания» исключается
   const knownStores = new Set(DDS_STORES_ORDER);
   const extraStores = Object.keys(storeTurnover)
     .filter(s => !knownStores.has(s) && s !== 'Компания')
