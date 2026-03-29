@@ -179,23 +179,44 @@
     .matrix-tbl .sum-row td { background: #F9FAFB; border-top: 1px solid #E5E7EB; font-size: 11px; }
     /* ─── Summary Matrix table ─── */
     .summary-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .summary-tbl th { padding: 9px 10px; text-align: right; font-size: 10px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #E5E7EB; background: #F9FAFB; white-space: nowrap; position: sticky; top: 0; z-index: 3; }
-    .summary-tbl th:first-child { text-align: left; position: sticky; left: 0; z-index: 4; min-width: 180px; max-width: 240px; }
-    .summary-tbl th:nth-child(2) { position: sticky; left: 180px; z-index: 4; background: #F0FDF4; }
-    .summary-tbl td { padding: 8px 10px; border-bottom: 1px solid #F3F4F6; text-align: right; white-space: nowrap; }
-    .summary-tbl td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; font-size: 12px; color: #374151; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
-    .summary-tbl td:nth-child(2) { position: sticky; left: 180px; background: #F0FDF4; z-index: 1; font-weight: 700; }
-    .summary-tbl tr:hover td { background: #F9FAFB; }
-    .summary-tbl tr:hover td:first-child, .summary-tbl tr:hover td:nth-child(2) { background: #F0FDF4; }
-    .summary-tbl .sm-income { color: #059669; font-weight: 700; }
+    .summary-tbl th { padding: 9px 10px; text-align: right; font-size: 11px; font-weight: 700; color: #fff; background: #1E3A5F; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid #2d4e73; white-space: nowrap; position: sticky; top: 0; z-index: 3; }
+    .summary-tbl th:first-child { text-align: left; position: sticky; left: 0; z-index: 4; width: 180px; min-width: 180px; max-width: 240px; background: #1E3A5F; }
+    .summary-tbl th:nth-child(2) { position: sticky; left: 180px; z-index: 4; background: #15803D; border-color: #166534; }
+    .summary-tbl td { padding: 8px 10px; border: 1px solid #E5E7EB; text-align: right; white-space: nowrap; color: #111827; }
+    .summary-tbl td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; font-size: 12px; color: #374151; width: 180px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; padding-left: 24px; }
+    .summary-tbl td:nth-child(2) { position: sticky; left: 180px; z-index: 1; font-weight: 700; background: #fff; }
+    .summary-tbl tr.sma-row:hover td { background: #F0F9FF !important; }
+    .summary-tbl tr.sma-row:hover td:nth-child(2) { background: #DCFCE7 !important; }
+    .summary-tbl .sm-income { color: #15803D; font-weight: 700; }
     .summary-tbl .sm-expense { color: #DC2626; font-weight: 700; }
-    .summary-tbl .sm-zero { color: #D1D5DB; }
-    .sg-income td { background: #F0FDF4 !important; }
-    .sg-income td:first-child { color: #059669; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .sg-expense td { background: #FEF2F2 !important; }
-    .sg-expense td:first-child { color: #B91C1C; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .sg-neutral td { background: #F9FAFB !important; }
-    .sg-neutral td:first-child { color: #6B7280; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .summary-tbl .sm-zero { color: #6B7280; }
+    .sg-income td { background: #EFF6FF !important; color: #1E3A5F; font-weight: 700; font-size: 12px; }
+    .sg-income td:first-child { border-left: 4px solid #2563EB; padding-left: 10px; }
+    .sg-expense td { background: #FFF7ED !important; color: #7C2D12; font-weight: 700; font-size: 12px; }
+    .sg-expense td:first-child { border-left: 4px solid #EA580C; padding-left: 10px; }
+    .sg-neutral td { background: #F3F4F6 !important; color: #374151; font-weight: 700; font-size: 12px; }
+    .sg-neutral td:first-child { border-left: 4px solid #6B7280; padding-left: 10px; }
+    .print-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #374151; background: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-family: 'Manrope', sans-serif; }
+    .print-btn:hover { background: #E5E7EB; }
+    @page { size: A4 landscape; margin: 1cm; }
+    @media print {
+      body { background: #fff; }
+      .sidebar,
+      nav,
+      header,
+      .print-btn,
+      #overlay,
+      #drillPanel,
+      #stateLoading,
+      #stateError,
+      #stateEmpty { display: none !important; }
+      .section:not(.active) { display: none !important; }
+      .section.active { display: block !important; }
+      .main-area { overflow: visible; padding: 0; }
+      .app-layout { height: auto; overflow: visible; }
+      .summary-tbl th, .summary-tbl td,
+      .sg-income td, .sg-expense td, .sg-neutral td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -209,6 +230,17 @@
   const OPENING_BALANCE_2026 = 35492540; // Остаток на начало 2026 года
   // Фиксированный порядок статей поступлений (остальные — по убыванию суммы)
   const INCOME_ARTICLE_PRIORITY = ['Выручка от продаж', 'Возврат товаров'];
+  const DDS_STORES_ORDER = [
+    'Офис',
+    'Магазин Астана',
+    'Магазин Мира',
+    'Магазин Есентай',
+    'Магазин Абайка',
+    'Магазин Восход',
+    'Магазин Above',
+    'Магазин Above Астана',
+    'Магазин Kaspi'
+  ];
 </script>
 
 <!-- ═══════════ TOPBAR ═══════════ -->
@@ -314,7 +346,10 @@
 
       <!-- ── РАЗДЕЛ 1: ОБЗОР ── -->
       <div class="section active" id="section-overview">
-        <h2 class="section-title">Обзор</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title" style="margin-bottom:0">Обзор</h2>
+          <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+        </div>
         <div class="kpi-grid" id="kpiGrid"></div>
         <div class="card">
           <div class="flex items-center justify-between mb-4">
@@ -336,6 +371,7 @@
               <button class="sort-btn active" id="expTabList" onclick="setExpensesTab('list')">По статьям</button>
               <button class="sort-btn" id="expTabTable" onclick="setExpensesTab('table')">Таблица</button>
             </div>
+            <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
           </div>
         </div>
         <!-- Sub-tab: По статьям -->
@@ -352,10 +388,13 @@
       <div class="section" id="section-summary">
         <div class="flex items-center justify-between mb-4">
           <h2 class="section-title" style="margin-bottom:0">Сводная по статьям и магазинам</h2>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6B7280;cursor:pointer;">
-            <input type="checkbox" id="summaryHideZeros" checked onchange="toggleSummaryZeros()" style="accent-color:#10B981;">
-            Скрыть нулевые
-          </label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6B7280;cursor:pointer;">
+              <input type="checkbox" id="summaryHideZeros" checked onchange="toggleSummaryZeros()" style="accent-color:#10B981;">
+              Скрыть нулевые
+            </label>
+            <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+          </div>
         </div>
         <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;overflow-x:auto;" id="summaryWrap">
           <p style="padding:24px;color:#9CA3AF;text-align:center;">Выберите месяц для загрузки данных</p>
@@ -364,13 +403,19 @@
 
       <!-- ── РАЗДЕЛ 4: ПО МАГАЗИНАМ ── -->
       <div class="section" id="section-stores">
-        <h2 class="section-title">По магазинам</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title" style="margin-bottom:0">По магазинам</h2>
+          <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+        </div>
         <div class="store-grid" id="storeGrid"></div>
       </div>
 
       <!-- ── РАЗДЕЛ 5: ПО ДНЯМ ── -->
       <div class="section" id="section-days">
-        <h2 class="section-title">Деньги по дням</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title" style="margin-bottom:0">Деньги по дням</h2>
+          <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+        </div>
         <div class="card">
           <canvas id="chartDays" style="max-height: 300px;"></canvas>
         </div>
@@ -1146,7 +1191,7 @@ const DDS_ARTICLES_ORDER = [
 function buildSummaryData(rows) {
   // Собираем данные: cellData[article][store] = sum
   const cellData = {};
-  const storeTurnover = {}; // для сортировки магазинов
+  const storeTurnover = {}; // для определения наличия данных по магазину
 
   rows.forEach(r => {
     if (r.activity === 'Техническая операция') return;
@@ -1162,11 +1207,15 @@ function buildSummaryData(rows) {
     storeTurnover[store] = (storeTurnover[store] || 0) + Math.abs(amt);
   });
 
-  // Сортировка магазинов: по убыванию оборота, тайбрейкер — алфавит; «Компания» исключается
-  const stores = Object.keys(storeTurnover).sort((a, b) => {
-    const diff = storeTurnover[b] - storeTurnover[a];
-    return diff !== 0 ? diff : a.localeCompare(b, 'ru');
-  }).filter(s => s !== 'Компания');
+  // Фиксированный порядок магазинов: DDS_STORES_ORDER в приоритете, неизвестные — в конце алфавитно; «Компания» исключается
+  const knownStores = new Set(DDS_STORES_ORDER);
+  const extraStores = Object.keys(storeTurnover)
+    .filter(s => !knownStores.has(s) && s !== 'Компания')
+    .sort((a, b) => a.localeCompare(b, 'ru'));
+  const stores = [
+    ...DDS_STORES_ORDER.filter(s => storeTurnover[s]),
+    ...extraStores
+  ];
 
   // Итого по статье = сумма по всем магазинам
   const articleTotal = {};
@@ -1247,12 +1296,13 @@ function renderSummaryMatrix() {
   html += `<th>Статья</th>`;
   html += `<th style="text-align:right">Итого</th>`;
   stores.forEach(s => {
-    html += `<th>${escHtml(s)}</th>`;
+    html += `<th style="text-align:right">${escHtml(s)}</th>`;
   });
   html += `</tr></thead>`;
 
   // tbody
   html += `<tbody>`;
+  let artRowIdx = 0;
   groups.forEach(g => {
     const groupCls = g.isIncome === true ? 'sg-income' : g.isIncome === false ? 'sg-expense' : 'sg-neutral';
 
@@ -1273,10 +1323,15 @@ function renderSummaryMatrix() {
     // Строки статей
     g.articles.forEach(a => {
       const isZero = Math.abs(a.total) < 0.01;
-      const rowHideClass = (hideZeros && isZero) ? ' data-zero="1" style="display:none"' : (isZero ? ' data-zero="1"' : '');
-      html += `<tr class="sma-row"${rowHideClass}>`;
-      html += `<td style="padding-left:20px">${escHtml(a.name)}</td>`;
-      html += `<td>${renderSummaryCell(a.total)}</td>`;
+      const rowBg = (artRowIdx % 2 === 0) ? '#fff' : '#F9FAFB';
+      artRowIdx++;
+      const totalBg = a.total > 0 ? '#F0FDF4' : (a.total < 0 ? '#FFF5F5' : '');
+      const totalBgStyle = totalBg ? ` background:${totalBg};` : '';
+      const rowHideStyle = (hideZeros && isZero) ? 'display:none;' : '';
+      const rowHideData = isZero ? ' data-zero="1"' : '';
+      html += `<tr class="sma-row"${rowHideData} style="${rowHideStyle}background:${rowBg}">`;
+      html += `<td style="background:${rowBg}">${escHtml(a.name)}</td>`;
+      html += `<td style="${totalBgStyle}font-weight:700">${renderSummaryCell(a.total)}</td>`;
       if (a.isCompanyWide) {
         html += `<td colspan="${stores.length}" style="text-align:center">${renderSummaryCell(a.total)}</td>`;
       } else {
