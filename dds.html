@@ -179,23 +179,23 @@
     .matrix-tbl .sum-row td { background: #F9FAFB; border-top: 1px solid #E5E7EB; font-size: 11px; }
     /* ─── Summary Matrix table ─── */
     .summary-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .summary-tbl th { padding: 9px 10px; text-align: right; font-size: 10px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #E5E7EB; background: #F9FAFB; white-space: nowrap; position: sticky; top: 0; z-index: 3; }
-    .summary-tbl th:first-child { text-align: left; position: sticky; left: 0; z-index: 4; min-width: 180px; max-width: 240px; }
-    .summary-tbl th:nth-child(2) { position: sticky; left: 180px; z-index: 4; background: #F0FDF4; }
-    .summary-tbl td { padding: 8px 10px; border-bottom: 1px solid #F3F4F6; text-align: right; white-space: nowrap; }
-    .summary-tbl td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; font-size: 12px; color: #374151; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
-    .summary-tbl td:nth-child(2) { position: sticky; left: 180px; background: #F0FDF4; z-index: 1; font-weight: 700; }
-    .summary-tbl tr:hover td { background: #F9FAFB; }
-    .summary-tbl tr:hover td:first-child, .summary-tbl tr:hover td:nth-child(2) { background: #F0FDF4; }
-    .summary-tbl .sm-income { color: #059669; font-weight: 700; }
+    .summary-tbl th { padding: 9px 10px; text-align: right; font-size: 11px; font-weight: 700; color: #fff; background: #1E3A5F; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid #2d4e73; white-space: nowrap; position: sticky; top: 0; z-index: 3; }
+    .summary-tbl th:first-child { text-align: left; position: sticky; left: 0; z-index: 4; min-width: 180px; max-width: 240px; background: #1E3A5F; }
+    .summary-tbl th:nth-child(2) { position: sticky; left: 180px; z-index: 4; background: #15803D; border-color: #166534; }
+    .summary-tbl td { padding: 8px 10px; border: 1px solid #E5E7EB; text-align: right; white-space: nowrap; color: #111827; }
+    .summary-tbl td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; font-size: 12px; color: #374151; max-width: 240px; overflow: hidden; text-overflow: ellipsis; padding-left: 24px; }
+    .summary-tbl td:nth-child(2) { position: sticky; left: 180px; z-index: 1; font-weight: 700; }
+    .summary-tbl tr.sma-row:hover td { background: #F0F9FF !important; }
+    .summary-tbl tr.sma-row:hover td:nth-child(2) { background: #DCFCE7 !important; }
+    .summary-tbl .sm-income { color: #15803D; font-weight: 700; }
     .summary-tbl .sm-expense { color: #DC2626; font-weight: 700; }
-    .summary-tbl .sm-zero { color: #D1D5DB; }
-    .sg-income td { background: #F0FDF4 !important; }
-    .sg-income td:first-child { color: #059669; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .sg-expense td { background: #FEF2F2 !important; }
-    .sg-expense td:first-child { color: #B91C1C; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .sg-neutral td { background: #F9FAFB !important; }
-    .sg-neutral td:first-child { color: #6B7280; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .summary-tbl .sm-zero { color: #6B7280; }
+    .sg-income td { background: #EFF6FF !important; color: #1E3A5F; font-weight: 700; font-size: 12px; }
+    .sg-income td:first-child { border-left: 4px solid #2563EB; padding-left: 10px; }
+    .sg-expense td { background: #FFF7ED !important; color: #7C2D12; font-weight: 700; font-size: 12px; }
+    .sg-expense td:first-child { border-left: 4px solid #EA580C; padding-left: 10px; }
+    .sg-neutral td { background: #F3F4F6 !important; color: #374151; font-weight: 700; font-size: 12px; }
+    .sg-neutral td:first-child { border-left: 4px solid #6B7280; padding-left: 10px; }
   </style>
 </head>
 <body class="min-h-screen">
