@@ -1262,12 +1262,13 @@ function renderSummaryMatrix() {
   html += `<th>Статья</th>`;
   html += `<th style="text-align:right">Итого</th>`;
   stores.forEach(s => {
-    html += `<th>${escHtml(s)}</th>`;
+    html += `<th style="text-align:right">${escHtml(s)}</th>`;
   });
   html += `</tr></thead>`;
 
   // tbody
   html += `<tbody>`;
+  let artRowIdx = 0;
   groups.forEach(g => {
     const groupCls = g.isIncome === true ? 'sg-income' : g.isIncome === false ? 'sg-expense' : 'sg-neutral';
 
@@ -1288,10 +1289,15 @@ function renderSummaryMatrix() {
     // Строки статей
     g.articles.forEach(a => {
       const isZero = Math.abs(a.total) < 0.01;
-      const rowHideClass = (hideZeros && isZero) ? ' data-zero="1" style="display:none"' : (isZero ? ' data-zero="1"' : '');
-      html += `<tr class="sma-row"${rowHideClass}>`;
-      html += `<td style="padding-left:20px">${escHtml(a.name)}</td>`;
-      html += `<td>${renderSummaryCell(a.total)}</td>`;
+      const rowBg = (artRowIdx % 2 === 0) ? '#fff' : '#F9FAFB';
+      artRowIdx++;
+      const totalBg = a.total > 0 ? '#F0FDF4' : (a.total < 0 ? '#FFF5F5' : '');
+      const totalBgStyle = totalBg ? ` background:${totalBg};` : '';
+      const rowHideStyle = (hideZeros && isZero) ? 'display:none;' : '';
+      const rowHideData = isZero ? ' data-zero="1"' : '';
+      html += `<tr class="sma-row"${rowHideData} style="${rowHideStyle}background:${rowBg}">`;
+      html += `<td style="background:${rowBg}">${escHtml(a.name)}</td>`;
+      html += `<td style="${totalBgStyle}font-weight:700">${renderSummaryCell(a.total)}</td>`;
       if (a.isCompanyWide) {
         html += `<td colspan="${stores.length}" style="text-align:center">${renderSummaryCell(a.total)}</td>`;
       } else {
