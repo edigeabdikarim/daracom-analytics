@@ -178,24 +178,28 @@
     .matrix-tbl .grp-expense td { color: #B91C1C; background: #FEF2F2; }
     .matrix-tbl .sum-row td { background: #F9FAFB; border-top: 1px solid #E5E7EB; font-size: 11px; }
     /* ─── Summary Matrix table ─── */
-    .summary-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .summary-tbl { width: 100%; border-collapse: collapse; font-size: 12px; border: 2px solid #1E3A5F; }
     .summary-tbl th { padding: 9px 10px; text-align: right; font-size: 11px; font-weight: 700; color: #fff; background: #1E3A5F; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid #2d4e73; white-space: nowrap; position: sticky; top: 0; z-index: 3; }
-    .summary-tbl th:first-child { text-align: left; position: sticky; left: 0; z-index: 4; width: 180px; min-width: 180px; max-width: 240px; background: #1E3A5F; }
+    .summary-tbl th:first-child { text-align: left; position: sticky; left: 0; z-index: 4; width: 180px; min-width: 180px; max-width: 240px; background: #1E3A5F; border-left: 2px solid #1E3A5F; }
+    .summary-tbl th:last-child { border-right: 2px solid #1E3A5F; }
     .summary-tbl th:nth-child(2) { position: sticky; left: 180px; z-index: 4; background: #15803D; border-color: #166534; }
-    .summary-tbl td { padding: 8px 10px; border: 1px solid #E5E7EB; text-align: right; white-space: nowrap; color: #111827; }
-    .summary-tbl td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; font-size: 12px; color: #374151; width: 180px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; padding-left: 24px; }
+    .summary-tbl td { padding: 8px 10px; border: 1px solid #9CA3AF; text-align: right; white-space: nowrap; color: #111827; }
+    .summary-tbl td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; font-size: 12px; color: #374151; width: 180px; max-width: 240px; white-space: normal; word-break: break-word; padding-left: 24px; border-left: 2px solid #1E3A5F; }
+    .summary-tbl td:last-child { border-right: 2px solid #1E3A5F; }
     .summary-tbl td:nth-child(2) { position: sticky; left: 180px; z-index: 1; font-weight: 700; background: #fff; }
     .summary-tbl tr.sma-row:hover td { background: #F0F9FF !important; }
     .summary-tbl tr.sma-row:hover td:nth-child(2) { background: #DCFCE7 !important; }
     .summary-tbl .sm-income { color: #15803D; font-weight: 700; }
     .summary-tbl .sm-expense { color: #DC2626; font-weight: 700; }
     .summary-tbl .sm-zero { color: #6B7280; }
-    .sg-income td { background: #EFF6FF !important; color: #1E3A5F; font-weight: 700; font-size: 12px; }
-    .sg-income td:first-child { border-left: 4px solid #2563EB; padding-left: 10px; }
-    .sg-expense td { background: #FFF7ED !important; color: #7C2D12; font-weight: 700; font-size: 12px; }
-    .sg-expense td:first-child { border-left: 4px solid #EA580C; padding-left: 10px; }
-    .sg-neutral td { background: #F3F4F6 !important; color: #374151; font-weight: 700; font-size: 12px; }
-    .sg-neutral td:first-child { border-left: 4px solid #6B7280; padding-left: 10px; }
+    .sg-income td { background: #EFF6FF !important; color: #1E3A5F; font-weight: 700; font-size: 12px; border-top: 2px solid #1E3A5F; border-bottom: 2px solid #1E3A5F; }
+    .sg-income td:first-child { padding-left: 12px; }
+    .sg-expense td { background: #FFF7ED !important; color: #7C2D12; font-weight: 700; font-size: 12px; border-top: 2px solid #1E3A5F; border-bottom: 2px solid #1E3A5F; }
+    .sg-expense td:first-child { padding-left: 12px; }
+    .sg-neutral td { background: #F3F4F6 !important; color: #374151; font-weight: 700; font-size: 12px; border-top: 2px solid #1E3A5F; border-bottom: 2px solid #1E3A5F; }
+    .sg-neutral td:first-child { padding-left: 12px; }
+    .smg-first td { border-top: 1px solid #9CA3AF !important; }
+    .sma-last td { border-bottom: 2px solid #1E3A5F !important; }
     .print-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #374151; background: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-family: 'Manrope', sans-serif; }
     .print-btn:hover { background: #E5E7EB; }
     @page { size: A4 landscape; margin: 1cm; }
@@ -220,6 +224,11 @@
       .summary-tbl th, .summary-tbl td { position: static !important; }
       .summary-tbl th, .summary-tbl td,
       .sg-income td, .sg-expense td, .sg-neutral td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .summary-tbl td, .summary-tbl th { border-color: #9CA3AF; }
+      .summary-tbl td:first-child, .summary-tbl td:last-child,
+      .summary-tbl th:first-child, .summary-tbl th:last-child { border-color: #1E3A5F; }
+      .sg-income td, .sg-expense td, .sg-neutral td { border-top-color: #1E3A5F !important; border-bottom-color: #1E3A5F !important; }
+      .sma-last td { border-bottom-color: #1E3A5F !important; }
     }
   </style>
 </head>
@@ -1264,9 +1273,11 @@ function renderSummaryMatrix() {
 
   // tbody
   html += `<tbody>`;
-  let artRowIdx = 0;
+  let isFirstGroup = true;
   groups.forEach(g => {
     const groupCls = g.isIncome === true ? 'sg-income' : g.isIncome === false ? 'sg-expense' : 'sg-neutral';
+    const firstCls = isFirstGroup ? ' smg-first' : '';
+    isFirstGroup = false;
 
     // Считаем нулевые строки в группе
     const nonZeroArticles = g.articles.filter(a => Math.abs(a.total) >= 0.01);
@@ -1274,7 +1285,7 @@ function renderSummaryMatrix() {
 
     // Строка заголовка группы
     const grpHideClass = (hideZeros && groupIsAllZero) ? ' style="display:none"' : '';
-    html += `<tr class="${groupCls} smg-row"${grpHideClass}>`;
+    html += `<tr class="${groupCls} smg-row${firstCls}"${grpHideClass}>`;
     html += `<td>${escHtml(g.name)}</td>`;
     html += `<td>${renderSummaryCell(g.subtotalTotal)}</td>`;
     html += `<td>${renderPctCell(g.subtotalTotal, totalIncome, true)}</td>`;
@@ -1283,16 +1294,19 @@ function renderSummaryMatrix() {
     });
     html += `</tr>`;
 
-    // Строки статей
-    g.articles.forEach(a => {
+    // Строки статей — artRowIdx сбрасывается для каждой группы
+    let artRowIdx = 0;
+    g.articles.forEach((a, aIdx) => {
       const isZero = Math.abs(a.total) < 0.01;
       const rowBg = (artRowIdx % 2 === 0) ? '#fff' : '#F9FAFB';
       artRowIdx++;
+      const isLastInGroup = aIdx === g.articles.length - 1;
+      const lastCls = isLastInGroup ? ' sma-last' : '';
       const totalBg = a.total > 0 ? '#F0FDF4' : (a.total < 0 ? '#FFF5F5' : '');
       const totalBgStyle = totalBg ? ` background:${totalBg};` : '';
       const rowHideStyle = (hideZeros && isZero) ? 'display:none;' : '';
       const rowHideData = isZero ? ' data-zero="1"' : '';
-      html += `<tr class="sma-row"${rowHideData} style="${rowHideStyle}background:${rowBg}">`;
+      html += `<tr class="sma-row${lastCls}"${rowHideData} style="${rowHideStyle}background:${rowBg}">`;
       html += `<td style="background:${rowBg}">${escHtml(a.name)}</td>`;
       html += `<td style="${totalBgStyle}font-weight:700">${renderSummaryCell(a.total)}</td>`;
       html += `<td style="background:${rowBg}">${renderPctCell(a.total, totalIncome, false)}</td>`;
