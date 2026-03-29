@@ -209,6 +209,17 @@
   const OPENING_BALANCE_2026 = 35492540; // Остаток на начало 2026 года
   // Фиксированный порядок статей поступлений (остальные — по убыванию суммы)
   const INCOME_ARTICLE_PRIORITY = ['Выручка от продаж', 'Возврат товаров'];
+  const DDS_STORES_ORDER = [
+    'Офис',
+    'Магазин Астана',
+    'Магазин Мира',
+    'Магазин Есентай',
+    'Магазин Абайка',
+    'Магазин Восход',
+    'Магазин Above',
+    'Магазин Above Астана',
+    'Магазин Kaspi'
+  ];
 </script>
 
 <!-- ═══════════ TOPBAR ═══════════ -->
@@ -1162,11 +1173,15 @@ function buildSummaryData(rows) {
     storeTurnover[store] = (storeTurnover[store] || 0) + Math.abs(amt);
   });
 
-  // Сортировка магазинов: по убыванию оборота, тайбрейкер — алфавит; «Компания» исключается
-  const stores = Object.keys(storeTurnover).sort((a, b) => {
-    const diff = storeTurnover[b] - storeTurnover[a];
-    return diff !== 0 ? diff : a.localeCompare(b, 'ru');
-  }).filter(s => s !== 'Компания');
+  // Фиксированный порядок магазинов; «Компания» исключается
+  const knownStores = new Set(DDS_STORES_ORDER);
+  const extraStores = Object.keys(storeTurnover)
+    .filter(s => !knownStores.has(s) && s !== 'Компания')
+    .sort((a, b) => a.localeCompare(b, 'ru'));
+  const stores = [
+    ...DDS_STORES_ORDER.filter(s => storeTurnover[s]),
+    ...extraStores
+  ];
 
   // Итого по статье = сумма по всем магазинам
   const articleTotal = {};
