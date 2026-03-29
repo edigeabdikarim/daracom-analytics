@@ -214,6 +214,10 @@
       .section.active { display: block !important; }
       .main-area { overflow: visible; padding: 0; }
       .app-layout { height: auto; overflow: visible; }
+      #summaryWrap { overflow: visible !important; border: none !important; border-radius: 0 !important; }
+      #summaryPrintHeader { display: block !important; }
+      .summary-tbl thead { display: table-header-group; }
+      .summary-tbl th, .summary-tbl td { position: static !important; }
       .summary-tbl th, .summary-tbl td,
       .sg-income td, .sg-expense td, .sg-neutral td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
@@ -373,6 +377,10 @@
 
       <!-- ── РАЗДЕЛ 3: СВОДНАЯ ── -->
       <div class="section" id="section-summary">
+        <div id="summaryPrintHeader" style="display:none;padding-bottom:14px;border-bottom:2px solid #1E3A5F;margin-bottom:14px">
+          <div style="font-size:17px;font-weight:700;color:#1E3A5F">ДДС · Daracom — Сводная по статьям и магазинам</div>
+          <div style="font-size:12px;color:#6B7280;margin-top:3px">Отчётный период: <span class="ph-month"></span></div>
+        </div>
         <div class="flex items-center justify-between mb-4">
           <h2 class="section-title" style="margin-bottom:0">Сводная по статьям и магазинам</h2>
           <div style="display:flex;align-items:center;gap:12px">
@@ -1025,82 +1033,101 @@ function _refreshAfterMonthLoad() {
 
 // ─── SUMMARY: ПОРЯДОК СТАТЕЙ ──────────────────────────
 const DDS_ARTICLES_ORDER = [
-  // Поступления
-  { article: 'Продажи товаров',                              group: 'Продажи',                  isIncome: true },
-  { article: 'Прочее поступление',                           group: 'Продажи',                  isIncome: true },
-  { article: 'Прочее возвраты',                              group: 'Продажи',                  isIncome: true },
-  { article: 'Получение кредитов и займов',                  group: 'Финансирование',            isIncome: true },
-  { article: 'Вклады от собственников',                      group: 'Финансирование',            isIncome: true },
-  { article: 'Оплаты по ранее выданным кредитам и займам',   group: 'Финансирование',            isIncome: true },
-  { article: 'Продажа ОС',                                   group: 'ОС',                        isIncome: true },
-  // Расходы
-  { article: 'Возвраты товаров',                             group: 'Прямые расходы',            isIncome: false },
+  // ── Продажи ──
+  { article: 'Продажи товаров',                              group: 'Продажи',                  isIncome: true  },
+  { article: 'Возвраты товаров',                             group: 'Продажи',                  isIncome: false },
+  // ── Прямые расходы ──
   { article: 'Закупка товара',                               group: 'Прямые расходы',            isIncome: false },
   { article: 'Логистика (Италия, Германия, Вьетнам)',         group: 'Прямые расходы',            isIncome: false },
+  // ── Аренда и ком. услуги ──
+  { article: 'Аренда торговых точек',                        group: 'Аренда и ком. услуги',      isIncome: false },
+  { article: 'Аренда офиса',                                 group: 'Аренда и ком. услуги',      isIncome: false },
+  { article: 'Аренда и Охрана Склада',                       group: 'Аренда и ком. услуги',      isIncome: false },
+  { article: 'Ком услуги',                                   group: 'Аренда и ком. услуги',      isIncome: false },
+  { article: 'Охрана',                                       group: 'Аренда и ком. услуги',      isIncome: false },
+  // ── Зарплаты ──
   { article: 'Зарплата Продавцы',                            group: 'Зарплаты',                  isIncome: false },
   { article: 'Зарплата Офис',                                group: 'Зарплаты',                  isIncome: false },
   { article: 'Зарплата Аутсорс',                             group: 'Зарплаты',                  isIncome: false },
   { article: 'Зарплата Техперсонал',                         group: 'Зарплаты',                  isIncome: false },
   { article: 'Зарплата СММ маркетинг, мерчандайзер',         group: 'Зарплаты',                  isIncome: false },
   { article: 'Зарплата Водитель',                            group: 'Зарплаты',                  isIncome: false },
-  { article: 'Транспортные услуги',                          group: 'Адм. расходы',              isIncome: false },
-  { article: 'Транспортные услуги Kaspi',                    group: 'Адм. расходы',              isIncome: false },
-  { article: 'Газель,грузчики',                              group: 'Адм. расходы',              isIncome: false },
-  { article: 'Доставка в Астану',                            group: 'Адм. расходы',              isIncome: false },
-  { article: 'Доставка в Алмату',                            group: 'Адм. расходы',              isIncome: false },
-  { article: 'Услуги банка',                                 group: 'Адм. расходы',              isIncome: false },
-  { article: 'Услуги банка Kaspi',                           group: 'Адм. расходы',              isIncome: false },
-  { article: 'Мероприятия, благотворительность',             group: 'Адм. расходы',              isIncome: false },
-  { article: 'Обучение персонала',                           group: 'Адм. расходы',              isIncome: false },
-  { article: 'Подарки клиентам',                             group: 'Адм. расходы',              isIncome: false },
-  { article: 'Подарки представителям',                       group: 'Адм. расходы',              isIncome: false },
-  { article: 'Подарки Итальяцам',                            group: 'Адм. расходы',              isIncome: false },
-  { article: 'Телекоммуникации',                             group: 'Адм. расходы',              isIncome: false },
-  { article: 'Программное обслуживание',                     group: 'Адм. расходы',              isIncome: false },
-  { article: 'Проценты по полученным кредитам и займам',     group: 'Адм. расходы',              isIncome: false },
-  { article: 'Расход на маркетинг',                          group: 'Адм. расходы',              isIncome: false },
-  { article: 'Оформление витрин',                            group: 'Адм. расходы',              isIncome: false },
-  { article: 'Реклама, таргет',                              group: 'Адм. расходы',              isIncome: false },
-  { article: 'Съемка, модели',                               group: 'Адм. расходы',              isIncome: false },
-  { article: 'Led реклама',                                  group: 'Адм. расходы',              isIncome: false },
-  { article: 'Услуги по сопровождению шопинга',              group: 'Адм. расходы',              isIncome: false },
-  { article: 'Процент стилиста',                             group: 'Адм. расходы',              isIncome: false },
-  { article: 'Тайный покупатель',                            group: 'Адм. расходы',              isIncome: false },
-  { article: 'Содержание торговых точек хоз тов, продукты',  group: 'Адм. расходы',              isIncome: false },
-  { article: 'Затраты на покупателя (чай, кофе, вода)',      group: 'Адм. расходы',              isIncome: false },
-  { article: 'Канцтовары и расходные материалы',             group: 'Адм. расходы',              isIncome: false },
-  { article: 'Содержание офиса хоз товары, продукты',        group: 'Адм. расходы',              isIncome: false },
-  { article: 'Аренда торговых точек',                        group: 'Адм. расходы',              isIncome: false },
-  { article: 'Аренда офиса',                                 group: 'Адм. расходы',              isIncome: false },
-  { article: 'Аренда и Охрана Склада',                       group: 'Адм. расходы',              isIncome: false },
-  { article: 'Ком услуги',                                   group: 'Адм. расходы',              isIncome: false },
-  { article: 'Охрана',                                       group: 'Адм. расходы',              isIncome: false },
-  { article: 'Расходы на персонал',                          group: 'Адм. расходы',              isIncome: false },
-  { article: 'Командировачные расходы',                      group: 'Адм. расходы',              isIncome: false },
-  { article: 'Поиск и найм персонала',                       group: 'Адм. расходы',              isIncome: false },
-  { article: 'Оплата СМС расылок',                           group: 'Адм. расходы',              isIncome: false },
-  { article: 'Содержание машины',                            group: 'Адм. расходы',              isIncome: false },
-  { article: 'Корпоративные мероприятия',                    group: 'Адм. расходы',              isIncome: false },
-  { article: 'Призовой фонд по внутренним конкурсам',        group: 'Адм. расходы',              isIncome: false },
-  { article: 'Подарки от Гульжан А. сотрудникам офиса',      group: 'Адм. расходы',              isIncome: false },
-  { article: 'Подарки от Гульжан А. сотрудникам магазина',   group: 'Адм. расходы',              isIncome: false },
-  { article: 'Дастархан по инициативе Гульжан Абдразаковны', group: 'Адм. расходы',              isIncome: false },
-  { article: 'Реставрация одежды',                           group: 'Адм. расходы',              isIncome: false },
-  { article: 'Расходы Kaspi',                                group: 'Адм. расходы',              isIncome: false },
-  { article: 'Ремонт Фридом',                                group: 'Адм. расходы',              isIncome: false },
-  { article: 'Ремонтные работы',                             group: 'Адм. расходы',              isIncome: false },
-  { article: 'Блогеры',                                      group: 'Адм. расходы',              isIncome: false },
+  // ── Налоги ──
   { article: 'Налоги ЗП',                                    group: 'Налоги',                    isIncome: false },
   { article: 'Налоги ИП (квартальные)',                      group: 'Налоги',                    isIncome: false },
   { article: 'Налоги',                                       group: 'Налоги',                    isIncome: false },
+  // ── Транспорт ──
+  { article: 'Транспортные услуги',                          group: 'Транспорт',                 isIncome: false },
+  { article: 'Транспортные услуги Kaspi',                    group: 'Транспорт',                 isIncome: false },
+  { article: 'Газель,грузчики',                              group: 'Транспорт',                 isIncome: false },
+  { article: 'Доставка в Астану',                            group: 'Транспорт',                 isIncome: false },
+  { article: 'Доставка в Алмату',                            group: 'Транспорт',                 isIncome: false },
+  { article: 'Содержание машины',                            group: 'Транспорт',                 isIncome: false },
+  // ── Маркетинг ──
+  { article: 'Расход на маркетинг',                          group: 'Маркетинг',                 isIncome: false },
+  { article: 'Оформление витрин',                            group: 'Маркетинг',                 isIncome: false },
+  { article: 'Реклама, таргет',                              group: 'Маркетинг',                 isIncome: false },
+  { article: 'Съемка, модели',                               group: 'Маркетинг',                 isIncome: false },
+  { article: 'Led реклама',                                  group: 'Маркетинг',                 isIncome: false },
+  { article: 'Блогеры',                                      group: 'Маркетинг',                 isIncome: false },
+  { article: 'Мероприятия, благотворительность',             group: 'Маркетинг',                 isIncome: false },
+  { article: 'Оплата СМС расылок',                           group: 'Маркетинг',                 isIncome: false },
+  // ── Клиентский сервис ──
+  { article: 'Услуги по сопровождению шопинга',              group: 'Клиентский сервис',         isIncome: false },
+  { article: 'Процент стилиста',                             group: 'Клиентский сервис',         isIncome: false },
+  { article: 'Тайный покупатель',                            group: 'Клиентский сервис',         isIncome: false },
+  { article: 'Подарки клиентам',                             group: 'Клиентский сервис',         isIncome: false },
+  { article: 'Затраты на покупателя (чай, кофе, вода)',      group: 'Клиентский сервис',         isIncome: false },
+  { article: 'Подарки представителям',                       group: 'Клиентский сервис',         isIncome: false },
+  { article: 'Подарки Итальяцам',                            group: 'Клиентский сервис',         isIncome: false },
+  // ── Персонал (не ЗП) ──
+  { article: 'Обучение персонала',                           group: 'Персонал',                  isIncome: false },
+  { article: 'Расходы на персонал',                          group: 'Персонал',                  isIncome: false },
+  { article: 'Поиск и найм персонала',                       group: 'Персонал',                  isIncome: false },
+  { article: 'Командировачные расходы',                      group: 'Персонал',                  isIncome: false },
+  { article: 'Корпоративные мероприятия',                    group: 'Персонал',                  isIncome: false },
+  { article: 'Призовой фонд по внутренним конкурсам',        group: 'Персонал',                  isIncome: false },
+  { article: 'Подарки от Гульжан А. сотрудникам офиса',      group: 'Персонал',                  isIncome: false },
+  { article: 'Подарки от Гульжан А. сотрудникам магазина',   group: 'Персонал',                  isIncome: false },
+  { article: 'Дастархан по инициативе Гульжан Абдразаковны', group: 'Персонал',                  isIncome: false },
+  // ── IT и офис ──
+  { article: 'Телекоммуникации',                             group: 'IT и офис',                 isIncome: false },
+  { article: 'Программное обслуживание',                     group: 'IT и офис',                 isIncome: false },
+  { article: 'Канцтовары и расходные материалы',             group: 'IT и офис',                 isIncome: false },
+  { article: 'Содержание офиса хоз товары, продукты',        group: 'IT и офис',                 isIncome: false },
+  { article: 'Содержание торговых точек хоз тов, продукты',  group: 'IT и офис',                 isIncome: false },
+  { article: 'Услуги банка',                                 group: 'IT и офис',                 isIncome: false },
+  { article: 'Услуги банка Kaspi',                           group: 'IT и офис',                 isIncome: false },
+  // ── Прочие расходы ──
+  { article: 'Реставрация одежды',                           group: 'Прочие расходы',            isIncome: false },
+  { article: 'Расходы Kaspi',                                group: 'Прочие расходы',            isIncome: false },
+  { article: 'Ремонт Фридом',                                group: 'Прочие расходы',            isIncome: false },
+  { article: 'Ремонтные работы',                             group: 'Прочие расходы',            isIncome: false },
+  // ── Платежи ──
   { article: 'Личные расходы Гульжан А.',                    group: 'Платежи',                   isIncome: false },
   { article: 'Дивиденды',                                    group: 'Платежи',                   isIncome: false },
   { article: 'Выдано собственнику',                          group: 'Платежи',                   isIncome: false },
-  { article: 'Оплаты по ранее полученным кредитам и займам', group: 'Финансирование (расходы)',   isIncome: false },
-  { article: 'Покупка ОС',                                   group: 'ОС (расходы)',               isIncome: false },
-  { article: 'Ремонт ОС',                                    group: 'ОС (расходы)',               isIncome: false },
-  { article: 'Выдача кредитов и займов',                     group: 'ОС (расходы)',               isIncome: false },
+  // ── Основные средства ──
+  { article: 'Покупка ОС',                                   group: 'Основные средства',         isIncome: false },
+  { article: 'Продажа ОС',                                   group: 'Основные средства',         isIncome: true  },
+  { article: 'Ремонт ОС',                                    group: 'Основные средства',         isIncome: false },
+  // ── Финансирование ──
+  { article: 'Прочее поступление',                           group: 'Финансирование',            isIncome: true  },
+  { article: 'Прочее возвраты',                              group: 'Финансирование',            isIncome: true  },
+  { article: 'Получение кредитов и займов',                  group: 'Финансирование',            isIncome: true  },
+  { article: 'Вклады от собственников',                      group: 'Финансирование',            isIncome: true  },
+  { article: 'Оплаты по ранее выданным кредитам и займам',   group: 'Финансирование',            isIncome: true  },
+  { article: 'Оплаты по ранее полученным кредитам и займам', group: 'Финансирование',            isIncome: false },
+  { article: 'Выдача кредитов и займов',                     group: 'Финансирование',            isIncome: false },
+  { article: 'Проценты по полученным кредитам и займам',     group: 'Финансирование',            isIncome: false },
 ];
+
+// Группы со смешанным типом — нейтральный заголовок
+const DDS_GROUP_TYPES = {
+  'Основные средства': null,
+  'Финансирование':    null,
+  'Продажи':           true,
+};
 
 // buildSummaryData(rows) → { stores[], groups[] }
 // groups[i] = { name, isIncome, articles[{ name, byStore, total, isCompanyWide }], subtotals }
@@ -1143,7 +1170,8 @@ function buildSummaryData(rows) {
   const groupsMap = new Map(); // groupName → { name, isIncome, articleNames[] }
   DDS_ARTICLES_ORDER.forEach(a => {
     if (!groupsMap.has(a.group)) {
-      groupsMap.set(a.group, { name: a.group, isIncome: a.isIncome, articleNames: [] });
+      const groupIsIncome = DDS_GROUP_TYPES.hasOwnProperty(a.group) ? DDS_GROUP_TYPES[a.group] : a.isIncome;
+      groupsMap.set(a.group, { name: a.group, isIncome: groupIsIncome, articleNames: [] });
     }
     groupsMap.get(a.group).articleNames.push(a.article);
   });
@@ -1177,7 +1205,12 @@ function buildSummaryData(rows) {
     groups.push({ name: g.name, isIncome: g.isIncome, articles, subtotals, subtotalTotal });
   });
 
-  return { stores, groups };
+  // Итоговые поступления = сумма всех income-групп (для расчёта %)
+  const totalIncome = groups
+    .filter(g => g.isIncome === true)
+    .reduce((s, g) => s + g.subtotalTotal, 0);
+
+  return { stores, groups, totalIncome };
 }
 
 // Рендерит значение ячейки матрицы
@@ -1185,6 +1218,14 @@ function renderSummaryCell(value) {
   if (Math.abs(value) < 0.01) return `<span class="sm-zero">—</span>`;
   if (value > 0) return `<span class="sm-income">${fmt(value)}</span>`;
   return `<span class="sm-expense">${fmt(value)}</span>`;
+}
+
+// Рендерит ячейку % от поступлений
+function renderPctCell(value, totalIncome, bold) {
+  if (!totalIncome || Math.abs(value) < 0.01) return `<span class="sm-zero">—</span>`;
+  const pct = (Math.abs(value) / totalIncome * 100).toFixed(1);
+  const style = bold ? 'font-weight:700' : 'color:#6B7280;font-size:11px';
+  return `<span style="${style}">${pct}%</span>`;
 }
 
 function renderSummaryMatrix() {
@@ -1198,12 +1239,16 @@ function renderSummaryMatrix() {
     return;
   }
 
-  const { stores, groups } = buildSummaryData(allRows);
+  const { stores, groups, totalIncome } = buildSummaryData(allRows);
   if (stores.length === 0) {
     wrap.innerHTML = `<p style="padding:24px;color:#9CA3AF;text-align:center;">Нет данных по магазинам за ${escHtml(MONTH_NAMES[currentMonth - 1])}</p>`;
     return;
   }
   const hideZeros = document.getElementById('summaryHideZeros') && document.getElementById('summaryHideZeros').checked;
+
+  // Обновляем печатный заголовок
+  const ph = document.getElementById('summaryPrintHeader');
+  if (ph) ph.querySelector('.ph-month').textContent = MONTH_NAMES[currentMonth - 1] + ' 2026';
 
   let html = `<table class="summary-tbl">`;
 
@@ -1211,6 +1256,7 @@ function renderSummaryMatrix() {
   html += `<thead><tr>`;
   html += `<th>Статья</th>`;
   html += `<th style="text-align:right">Итого</th>`;
+  html += `<th style="text-align:right;font-size:10px;letter-spacing:0">% выр.</th>`;
   stores.forEach(s => {
     html += `<th style="text-align:right">${escHtml(summaryStoreName(s))}</th>`;
   });
@@ -1231,6 +1277,7 @@ function renderSummaryMatrix() {
     html += `<tr class="${groupCls} smg-row"${grpHideClass}>`;
     html += `<td>${escHtml(g.name)}</td>`;
     html += `<td>${renderSummaryCell(g.subtotalTotal)}</td>`;
+    html += `<td>${renderPctCell(g.subtotalTotal, totalIncome, true)}</td>`;
     stores.forEach(s => {
       html += `<td>${renderSummaryCell(g.subtotals[s] || 0)}</td>`;
     });
@@ -1248,6 +1295,7 @@ function renderSummaryMatrix() {
       html += `<tr class="sma-row"${rowHideData} style="${rowHideStyle}background:${rowBg}">`;
       html += `<td style="background:${rowBg}">${escHtml(a.name)}</td>`;
       html += `<td style="${totalBgStyle}font-weight:700">${renderSummaryCell(a.total)}</td>`;
+      html += `<td style="background:${rowBg}">${renderPctCell(a.total, totalIncome, false)}</td>`;
       if (a.isCompanyWide) {
         html += `<td colspan="${stores.length}" style="text-align:center">${renderSummaryCell(a.total)}</td>`;
       } else {
