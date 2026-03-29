@@ -196,6 +196,8 @@
     .sg-expense td:first-child { border-left: 4px solid #EA580C; padding-left: 10px; }
     .sg-neutral td { background: #F3F4F6 !important; color: #374151; font-weight: 700; font-size: 12px; }
     .sg-neutral td:first-child { border-left: 4px solid #6B7280; padding-left: 10px; }
+    .print-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #374151; background: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-family: 'Manrope', sans-serif; }
+    .print-btn:hover { background: #E5E7EB; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -325,7 +327,10 @@
 
       <!-- ── РАЗДЕЛ 1: ОБЗОР ── -->
       <div class="section active" id="section-overview">
-        <h2 class="section-title">Обзор</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title" style="margin-bottom:0">Обзор</h2>
+          <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+        </div>
         <div class="kpi-grid" id="kpiGrid"></div>
         <div class="card">
           <div class="flex items-center justify-between mb-4">
@@ -347,6 +352,7 @@
               <button class="sort-btn active" id="expTabList" onclick="setExpensesTab('list')">По статьям</button>
               <button class="sort-btn" id="expTabTable" onclick="setExpensesTab('table')">Таблица</button>
             </div>
+            <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
           </div>
         </div>
         <!-- Sub-tab: По статьям -->
@@ -363,10 +369,13 @@
       <div class="section" id="section-summary">
         <div class="flex items-center justify-between mb-4">
           <h2 class="section-title" style="margin-bottom:0">Сводная по статьям и магазинам</h2>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6B7280;cursor:pointer;">
-            <input type="checkbox" id="summaryHideZeros" checked onchange="toggleSummaryZeros()" style="accent-color:#10B981;">
-            Скрыть нулевые
-          </label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6B7280;cursor:pointer;">
+              <input type="checkbox" id="summaryHideZeros" checked onchange="toggleSummaryZeros()" style="accent-color:#10B981;">
+              Скрыть нулевые
+            </label>
+            <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+          </div>
         </div>
         <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;overflow-x:auto;" id="summaryWrap">
           <p style="padding:24px;color:#9CA3AF;text-align:center;">Выберите месяц для загрузки данных</p>
@@ -375,13 +384,19 @@
 
       <!-- ── РАЗДЕЛ 4: ПО МАГАЗИНАМ ── -->
       <div class="section" id="section-stores">
-        <h2 class="section-title">По магазинам</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title" style="margin-bottom:0">По магазинам</h2>
+          <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+        </div>
         <div class="store-grid" id="storeGrid"></div>
       </div>
 
       <!-- ── РАЗДЕЛ 5: ПО ДНЯМ ── -->
       <div class="section" id="section-days">
-        <h2 class="section-title">Деньги по дням</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title" style="margin-bottom:0">Деньги по дням</h2>
+          <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+        </div>
         <div class="card">
           <canvas id="chartDays" style="max-height: 300px;"></canvas>
         </div>
