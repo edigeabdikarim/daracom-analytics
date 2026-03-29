@@ -198,6 +198,23 @@
     .sg-neutral td:first-child { border-left: 4px solid #6B7280; padding-left: 10px; }
     .print-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #374151; background: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-family: 'Manrope', sans-serif; }
     .print-btn:hover { background: #E5E7EB; }
+    @page { size: A4 landscape; margin: 1cm; }
+    @media print {
+      body { background: #fff; }
+      .sidebar,
+      header,
+      .print-btn,
+      #overlay,
+      #drillPanel,
+      #stateLoading,
+      #stateError,
+      #stateEmpty { display: none !important; }
+      .section:not(.active) { display: none !important; }
+      .section.active { display: block !important; }
+      .main-area { overflow: visible; padding: 0; }
+      .app-layout { height: auto; overflow: visible; }
+      .summary-tbl th, .summary-tbl td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body class="min-h-screen">
