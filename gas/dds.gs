@@ -87,41 +87,21 @@ function parseNumDDS(v) {
 }
 
 /**
- * Возвращает суммарные поступления и выбытия по каждому месяцу
- * (исключая Технические операции)
- * Формат: { "1": { incoming: N, outgoing: N }, "2": {...}, ... }
+ * Возвращает остатки на начало каждого месяца из листа «ДДС: Сводный».
+ * Читает строку «Денег на начало месяца» (row 2), колонки B–M = месяцы 1–12.
+ * Формат: { "1": { balance: N }, "2": { balance: N }, ... }
  */
 function getDDSBalanceSummary() {
   const ss = SpreadsheetApp.openById(DDS_SHEET_ID);
-  const sheet = ss.getSheetByName('ДДС: месяц');
-  if (!sheet) throw new Error('Лист "ДДС: месяц" не найден');
+  const sheet = ss.getSheetByName('ДДС: Сводный');
+  if (!sheet) throw new Error('Лист "ДДС: Сводный" не найден');
 
-  const allRows = sheet.getDataRange().getValues();
-
-  let headerIdx = 2;
-  for (let i = 0; i < Math.min(6, allRows.length); i++) {
-    const c2 = String(allRows[i][2]);
-    if (c2.includes('цифрой') || c2 === 'Мсц (цифрой)') { headerIdx = i; break; }
-    if (String(allRows[i][0]) === 'Месяц' && String(allRows[i][1]) === 'Год') { headerIdx = i; break; }
+  const balanceRow = sheet.getRange('B2:M2').getValues()[0];
+  const result = {};
+  for (let i = 0; i < 12; i++) {
+    result[i + 1] = { balance: parseNumDDS(balanceRow[i]) };
   }
-
-  // Для расчёта остатка: включаем ВСЕ типы операций.
-  // Технические операции (переводы между кошельками) нейтральны — они дают +X и −X, нетто = 0.
-  // Финансовая деятельность (займы, вклады) учитывается корректно.
-  const monthly = {};
-  for (let i = headerIdx + 1; i < allRows.length; i++) {
-    const r = allRows[i];
-    const msc = parseInt(r[2]);
-    if (isNaN(msc) || msc < 1 || msc > 12) continue;
-    const type = String(r[12]).trim();
-    const amount = parseNumDDS(r[4]);
-    if (amount === 0 && !String(r[3]).trim()) continue;
-    if (!monthly[msc]) monthly[msc] = { incoming: 0, outgoing: 0 };
-    if (type === 'Поступление') monthly[msc].incoming += amount;
-    if (type === 'Выбытие')     monthly[msc].outgoing += Math.abs(amount);
-  }
-
-  return monthly;
+  return result;
 }
 
 /**

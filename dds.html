@@ -227,7 +227,6 @@
   // Формат запроса: DDS_GAS_URL + '?action=dds&month=' + N
   const DDS_GAS_URL = 'https://script.google.com/macros/s/AKfycbys3hHPuyBSce--cqASzZG5lf7Dj1M7qrARMLQagHFj-eK65WmxsvUFVYcy9Z3eh1meag/exec';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 минут
-  const OPENING_BALANCE_2026 = 35492540; // Остаток на начало 2026 года
   // Фиксированный порядок статей поступлений (остальные — по убыванию суммы)
   const INCOME_ARTICLE_PRIORITY = ['Выручка от продаж', 'Возврат товаров'];
   const DDS_STORES_ORDER = [
@@ -484,7 +483,7 @@ const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','
 function loadBalanceSummary() {
   const cacheKey = 'dds_balance_cache';
   // Версия логики — при смене сбрасываем кэш
-  const BALANCE_VERSION = 'v2-all-activities';
+  const BALANCE_VERSION = 'v3-direct-from-svodny';
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
@@ -512,14 +511,12 @@ function loadBalanceSummary() {
 }
 
 // Вычисляет остаток на начало и конец указанного месяца
+// Данные берутся напрямую из «ДДС: Сводный» (строка «Денег на начало месяца»)
 function calcBalance(month) {
-  let balanceStart = OPENING_BALANCE_2026;
-  for (let m = 1; m < month; m++) {
-    const mb = monthlyBalance && monthlyBalance[m];
-    if (mb) balanceStart += mb.incoming - mb.outgoing;
-  }
-  const curMonth = monthlyBalance && monthlyBalance[month];
-  const balanceEnd = balanceStart + (curMonth ? curMonth.incoming - curMonth.outgoing : 0);
+  const mb = monthlyBalance && monthlyBalance[month];
+  const balanceStart = mb ? mb.balance : 0;
+  const next = monthlyBalance && monthlyBalance[month + 1];
+  const balanceEnd = next ? next.balance : balanceStart;
   return { balanceStart, balanceEnd };
 }
 
