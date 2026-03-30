@@ -1674,18 +1674,27 @@ function buildGulzhanData(month) {
     if (r.direction === 'Операция') return false;
     return true;
   };
+  const getArt = r => r.article && r.article.trim() ? r.article.trim() : 'Прочее';
 
-  // Текущий месяц — без advance и prevmonth статей
+  // Текущий месяц: исключаем advance, prevmonth, per-store-prevmonth и квартальные строки
   const rowsCurrent = (allMonthsData[month] || []).filter(r => {
     if (!filterRow(r)) return false;
-    const art = r.article && r.article.trim() ? r.article.trim() : 'Прочее';
-    return !GULZHAN_ADVANCE_ARTICLES.has(art) && !GULZHAN_PREV_MONTH_ARTICLES.has(art);
+    const art = getArt(r);
+    if (GULZHAN_ADVANCE_ARTICLES.has(art)) return false;
+    if (GULZHAN_PREV_MONTH_ARTICLES.has(art)) return false;
+    // Per-store prevmonth: убираем нужные магазины из текущего месяца
+    if (GULZHAN_PREVMONTH_STORES[art] && GULZHAN_PREVMONTH_STORES[art].has(r.store)) return false;
+    // Квартальные: убираем нужные магазины (null = все магазины)
+    if (GULZHAN_QUARTERLY_STORES.hasOwnProperty(art)) {
+      const qStores = GULZHAN_QUARTERLY_STORES[art];
+      if (qStores === null || qStores.has(r.store)) return false;
+    }
+    return true;
   });
 
-  // Advance-статьи: из M-1 или из константы декабря для января
+  // Advance-статьи: из M-1 (или хардкод декабря для января)
   let rowsAdvance = [];
   if (month === 1) {
-    // Синтетические строки из GULZHAN_DEC2025_RENT
     Object.entries(GULZHAN_DEC2025_RENT).forEach(([article, storeMap]) => {
       Object.entries(storeMap).forEach(([store, amount]) => {
         if (amount !== 0) {
@@ -1700,19 +1709,42 @@ function buildGulzhanData(month) {
   } else {
     rowsAdvance = (allMonthsData[month - 1] || []).filter(r => {
       if (!filterRow(r)) return false;
-      const art = r.article && r.article.trim() ? r.article.trim() : 'Прочее';
-      return GULZHAN_ADVANCE_ARTICLES.has(art);
+      return GULZHAN_ADVANCE_ARTICLES.has(getArt(r));
     });
   }
 
-  // PrevMonth-статьи: из M+1 (если загружены)
+  // PrevMonth-статьи целиком (зарплаты, Налоги ЗП): из M+1
   const rowsPrevMonth = (allMonthsData[month + 1] || []).filter(r => {
     if (!filterRow(r)) return false;
-    const art = r.article && r.article.trim() ? r.article.trim() : 'Прочее';
-    return GULZHAN_PREV_MONTH_ARTICLES.has(art);
+    return GULZHAN_PREV_MONTH_ARTICLES.has(getArt(r));
   });
 
-  return buildSummaryData([...rowsCurrent, ...rowsAdvance, ...rowsPrevMonth]);
+  // Per-store prevmonth (Аренда переменная, Астана/AboveАстана): из M+1
+  let rowsPrevMonthPartial = [];
+  if (month < 12) {
+    const nextData = allMonthsData[month + 1] || [];
+    Object.entries(GULZHAN_PREVMONTH_STORES).forEach(([art, stores]) => {
+      const filtered = nextData.filter(r => {
+        if (!filterRow(r)) return false;
+        return getArt(r) === art && stores.has(r.store);
+      });
+      rowsPrevMonthPartial = rowsPrevMonthPartial.concat(filtered);
+    });
+  }
+
+  // Квартальные строки (Есентай + Налоги ИП)
+  let rowsQuarterly = [];
+  Object.entries(GULZHAN_QUARTERLY_STORES).forEach(([art, storeSet]) => {
+    rowsQuarterly = rowsQuarterly.concat(buildQuarterlyRows(art, storeSet, month));
+  });
+
+  return buildSummaryData([
+    ...rowsCurrent,
+    ...rowsAdvance,
+    ...rowsPrevMonth,
+    ...rowsPrevMonthPartial,
+    ...rowsQuarterly,
+  ]);
 }
 
 function renderGulzhanMatrix() {
