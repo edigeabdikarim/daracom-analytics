@@ -1096,35 +1096,41 @@ function setExpensesTab(tab) {
 }
 
 // ─── LOAD ALL MONTHS ──────────────────────────────────
+// Загружает один конкретный месяц (если ещё не загружен)
+function ensureMonthLoaded(m) {
+  if (m < 1 || m > 12) return;
+  if (allMonthsLoaded[m] === 'done' || allMonthsLoaded[m] === 'loading') return;
+  allMonthsLoaded[m] = 'loading';
+  const cacheKey = 'dds_cache_month_' + m;
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const { ts, data } = JSON.parse(cached);
+      if (Date.now() - ts < CACHE_TTL_MS) {
+        allMonthsData[m] = data.rows || [];
+        allMonthsLoaded[m] = 'done';
+        _refreshAfterMonthLoad();
+        return;
+      }
+    }
+  } catch(e) {}
+  (function(month) {
+    fetch(DDS_GAS_URL + '?action=dds&month=' + month)
+      .then(r => r.json())
+      .then(resp => {
+        if (!resp.ok) throw new Error();
+        allMonthsData[month] = resp.data.rows || [];
+        allMonthsLoaded[month] = 'done';
+        localStorage.setItem('dds_cache_month_' + month, JSON.stringify({ ts: Date.now(), data: resp.data }));
+        _refreshAfterMonthLoad();
+      })
+      .catch(() => { allMonthsLoaded[month] = 'error'; });
+  })(m);
+}
+
 function loadAllMonths() {
   for (let m = 1; m <= currentMonth; m++) {
-    if (allMonthsLoaded[m] === 'done' || allMonthsLoaded[m] === 'loading') continue;
-    allMonthsLoaded[m] = 'loading';
-    const cacheKey = 'dds_cache_month_' + m;
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const { ts, data } = JSON.parse(cached);
-        if (Date.now() - ts < CACHE_TTL_MS) {
-          allMonthsData[m] = data.rows || [];
-          allMonthsLoaded[m] = 'done';
-          _refreshAfterMonthLoad();
-          continue;
-        }
-      }
-    } catch(e) {}
-    (function(month) {
-      fetch(DDS_GAS_URL + '?action=dds&month=' + month)
-        .then(r => r.json())
-        .then(resp => {
-          if (!resp.ok) throw new Error();
-          allMonthsData[month] = resp.data.rows || [];
-          allMonthsLoaded[month] = 'done';
-          localStorage.setItem('dds_cache_month_' + month, JSON.stringify({ ts: Date.now(), data: resp.data }));
-          _refreshAfterMonthLoad();
-        })
-        .catch(() => { allMonthsLoaded[month] = 'error'; });
-    })(m);
+    ensureMonthLoaded(m);
   }
 }
 
