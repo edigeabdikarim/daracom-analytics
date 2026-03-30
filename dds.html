@@ -1161,14 +1161,13 @@ const DDS_ARTICLES_ORDER = [
   { article: 'Оформление витрин',                            group: 'Маркетинг',                 isIncome: false },
   { article: 'Реклама, таргет',                              group: 'Маркетинг',                 isIncome: false },
   { article: 'Съемка, модели',                               group: 'Маркетинг',                 isIncome: false },
-  { article: 'Led реклама',                                  group: 'Маркетинг',                 isIncome: false },
+  { article: 'Наружная реклама',                              group: 'Маркетинг',                 isIncome: false },
   { article: 'Блогеры',                                      group: 'Маркетинг',                 isIncome: false },
   { article: 'Мероприятия, благотворительность',             group: 'Маркетинг',                 isIncome: false },
-  { article: 'Оплата СМС расылок',                           group: 'Маркетинг',                 isIncome: false },
+  { article: 'Оплата СМС рассылок',                          group: 'Маркетинг',                 isIncome: false },
   // ── Клиентский сервис ──
   { article: 'Услуги по сопровождению шопинга',              group: 'Клиентский сервис',         isIncome: false },
   { article: 'Процент стилиста',                             group: 'Клиентский сервис',         isIncome: false },
-  { article: 'Тайный покупатель',                            group: 'Клиентский сервис',         isIncome: false },
   { article: 'Подарки клиентам',                             group: 'Клиентский сервис',         isIncome: false },
   { article: 'Затраты на покупателя (чай, кофе, вода)',      group: 'Клиентский сервис',         isIncome: false },
   { article: 'Подарки представителям',                       group: 'Клиентский сервис',         isIncome: false },
@@ -1177,12 +1176,13 @@ const DDS_ARTICLES_ORDER = [
   { article: 'Обучение персонала',                           group: 'Персонал',                  isIncome: false },
   { article: 'Расходы на персонал',                          group: 'Персонал',                  isIncome: false },
   { article: 'Поиск и найм персонала',                       group: 'Персонал',                  isIncome: false },
-  { article: 'Командировачные расходы',                      group: 'Персонал',                  isIncome: false },
+  { article: 'Командировочные расходы',                      group: 'Персонал',                  isIncome: false },
   { article: 'Корпоративные мероприятия',                    group: 'Персонал',                  isIncome: false },
   { article: 'Призовой фонд по внутренним конкурсам',        group: 'Персонал',                  isIncome: false },
   { article: 'Подарки от Гульжан А. сотрудникам офиса',      group: 'Персонал',                  isIncome: false },
   { article: 'Подарки от Гульжан А. сотрудникам магазина',   group: 'Персонал',                  isIncome: false },
   { article: 'Дастархан по инициативе Гульжан Абдразаковны', group: 'Персонал',                  isIncome: false },
+  { article: 'Тайный покупатель',                            group: 'Персонал',                  isIncome: false },
   // ── IT и офис ──
   { article: 'Телекоммуникации',                             group: 'IT и офис',                 isIncome: false },
   { article: 'Программное обслуживание',                     group: 'IT и офис',                 isIncome: false },
@@ -1200,6 +1200,7 @@ const DDS_ARTICLES_ORDER = [
   { article: 'Личные расходы Гульжан А.',                    group: 'Платежи',                   isIncome: false },
   { article: 'Дивиденды',                                    group: 'Платежи',                   isIncome: false },
   { article: 'Выдано собственнику',                          group: 'Платежи',                   isIncome: false },
+  { article: 'Вклады от собственников',                      group: 'Платежи',                   isIncome: true  },
   // ── Основные средства ──
   { article: 'Покупка ОС',                                   group: 'Основные средства',         isIncome: false },
   { article: 'Продажа ОС',                                   group: 'Основные средства',         isIncome: true  },
@@ -1208,12 +1209,21 @@ const DDS_ARTICLES_ORDER = [
   { article: 'Прочее поступление',                           group: 'Финансирование',            isIncome: true  },
   { article: 'Прочее возвраты',                              group: 'Финансирование',            isIncome: true  },
   { article: 'Получение кредитов и займов',                  group: 'Финансирование',            isIncome: true  },
-  { article: 'Вклады от собственников',                      group: 'Финансирование',            isIncome: true  },
   { article: 'Оплаты по ранее выданным кредитам и займам',   group: 'Финансирование',            isIncome: true  },
   { article: 'Оплаты по ранее полученным кредитам и займам', group: 'Финансирование',            isIncome: false },
   { article: 'Выдача кредитов и займов',                     group: 'Финансирование',            isIncome: false },
   { article: 'Проценты по полученным кредитам и займам',     group: 'Финансирование',            isIncome: false },
 ];
+
+// Статьи, которые всегда отображаются как общекорпоративные (colspan по магазинам)
+const COMPANY_WIDE_ARTICLES = new Set([
+  'Канцтовары и расходные материалы',
+  'Корпоративные мероприятия',
+  'Дивиденды',
+  'Выдано собственнику',
+  'Вклады от собственников',
+  'Выдача кредитов и займов',
+]);
 
 // Lookup: article name → group name (built from DDS_ARTICLES_ORDER)
 const ARTICLE_GROUP = {};
@@ -1288,7 +1298,7 @@ function buildSummaryData(rows) {
       stores.forEach(s => { byStore[s] = (cellData[name] && cellData[name][s]) || 0; });
       const total = articleTotal[name] || 0;
       const keys = Object.keys(cellData[name] || {});
-      const isCompanyWide = keys.length > 0 && keys.every(s => s === 'Компания');
+      const isCompanyWide = COMPANY_WIDE_ARTICLES.has(name) || (keys.length > 0 && keys.every(s => s === 'Компания'));
       return { name, byStore, total, isCompanyWide };
     });
 
