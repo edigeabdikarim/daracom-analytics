@@ -1558,6 +1558,204 @@ function toggleSummaryZeros() {
   });
 }
 
+// ─── ДДС ГУЛЬЖАН А. — ЛОГИКА ДАННЫХ ──────────────────
+
+// Возвращает строки для статьи с учётом сдвига месяца:
+// advance → берём из month-1 (или из GULZHAN_DEC2025_RENT для января)
+// prevmonth → берём из month+1 (или пусто, если нет данных)
+// остальные → из allMonthsData[month]
+function buildGulzhanData(month) {
+  const filterRow = r => {
+    if (r.activity === 'Техническая операция') return false;
+    if (r.direction === 'Операция') return false;
+    return true;
+  };
+
+  // Текущий месяц — без advance и prevmonth статей
+  const rowsCurrent = (allMonthsData[month] || []).filter(r => {
+    if (!filterRow(r)) return false;
+    const art = r.article && r.article.trim() ? r.article.trim() : 'Прочее';
+    return !GULZHAN_ADVANCE_ARTICLES.has(art) && !GULZHAN_PREV_MONTH_ARTICLES.has(art);
+  });
+
+  // Advance-статьи: из M-1 или из константы декабря для января
+  let rowsAdvance = [];
+  if (month === 1) {
+    // Синтетические строки из GULZHAN_DEC2025_RENT
+    Object.entries(GULZHAN_DEC2025_RENT).forEach(([article, storeMap]) => {
+      Object.entries(storeMap).forEach(([store, amount]) => {
+        if (amount !== 0) {
+          rowsAdvance.push({
+            article, store, amount,
+            activity: 'Операционная', direction: 'Адм. расходы',
+            type: amount > 0 ? 'Поступление' : 'Выбытие',
+          });
+        }
+      });
+    });
+  } else {
+    rowsAdvance = (allMonthsData[month - 1] || []).filter(r => {
+      if (!filterRow(r)) return false;
+      const art = r.article && r.article.trim() ? r.article.trim() : 'Прочее';
+      return GULZHAN_ADVANCE_ARTICLES.has(art);
+    });
+  }
+
+  // PrevMonth-статьи: из M+1 (если загружены)
+  const rowsPrevMonth = (allMonthsData[month + 1] || []).filter(r => {
+    if (!filterRow(r)) return false;
+    const art = r.article && r.article.trim() ? r.article.trim() : 'Прочее';
+    return GULZHAN_PREV_MONTH_ARTICLES.has(art);
+  });
+
+  return buildSummaryData([...rowsCurrent, ...rowsAdvance, ...rowsPrevMonth]);
+}
+
+function renderGulzhanMatrix() {
+  const wrap = document.getElementById('gulzhanWrap');
+  if (!wrap) return;
+  if (document.getElementById('stateContent').classList.contains('hidden')) return;
+  if (!allRows || allRows.length === 0) {
+    wrap.innerHTML = `<p style="padding:24px;color:#9CA3AF;text-align:center;">Нет данных за ${escHtml(MONTH_NAMES[currentMonth - 1])}</p>`;
+    return;
+  }
+
+  // Запускаем загрузку смежных месяцев (не блокируем рендер)
+  ensureMonthLoaded(currentMonth - 1);
+  ensureMonthLoaded(currentMonth + 1);
+
+  const { stores, groups, totalIncome } = buildGulzhanData(currentMonth);
+  if (stores.length === 0) {
+    wrap.innerHTML = `<p style="padding:24px;color:#9CA3AF;text-align:center;">Нет данных по магазинам за ${escHtml(MONTH_NAMES[currentMonth - 1])}</p>`;
+    return;
+  }
+
+  const hideZeros = document.getElementById('gulzhanHideZeros') && document.getElementById('gulzhanHideZeros').checked;
+  const prevMonthName  = currentMonth > 1 ? MONTH_NAMES[currentMonth - 2] : 'дек. 2025';
+  const nextMonthName  = currentMonth < 12 ? MONTH_NAMES[currentMonth] : '—';
+  const prevLoading    = currentMonth > 1 && allMonthsLoaded[currentMonth - 1] !== 'done';
+  const nextLoading    = currentMonth < 12 && allMonthsLoaded[currentMonth + 1] === 'loading';
+
+  // Печатный заголовок
+  const ph = document.getElementById('gulzhanPrintHeader');
+  if (ph) ph.querySelector('.ph-month').textContent = MONTH_NAMES[currentMonth - 1] + ' 2026';
+
+  // Чипы остатков
+  const { balanceStart, balanceEnd } = calcBalance(currentMonth);
+  const chipsEl = document.getElementById('gulzhanBalanceChips');
+  if (chipsEl) {
+    chipsEl.innerHTML = `
+      <div class="bal-chip">
+        <div class="bal-chip-label">Нач. месяца</div>
+        <div class="bal-chip-value">${fmt(balanceStart)} ₸</div>
+      </div>
+      <div class="bal-chip">
+        <div class="bal-chip-label">Кон. месяца</div>
+        <div class="bal-chip-value">${fmt(balanceEnd)} ₸</div>
+      </div>`;
+  }
+  const printBalEl = document.getElementById('gulzhanPrintBalances');
+  if (printBalEl) {
+    printBalEl.innerHTML = `
+      <div style="display:flex;flex-direction:column">
+        <span style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em">Остаток на начало</span>
+        <span style="font-size:13px;font-weight:700;color:#1E3A5F;margin-top:2px">${fmt(balanceStart)} ₸</span>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <span style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em">Остаток на конец</span>
+        <span style="font-size:13px;font-weight:700;color:#1E3A5F;margin-top:2px">${fmt(balanceEnd)} ₸</span>
+      </div>`;
+  }
+
+  let html = `<table class="summary-tbl">`;
+
+  // thead
+  html += `<thead><tr>`;
+  html += `<th>Статья</th>`;
+  html += `<th style="text-align:right">Итого</th>`;
+  html += `<th style="text-align:right;font-size:10px;letter-spacing:0">% выр.</th>`;
+  stores.forEach(s => {
+    html += `<th style="text-align:right">${escHtml(summaryStoreName(s))}</th>`;
+  });
+  html += `</tr></thead>`;
+
+  // tbody
+  html += `<tbody>`;
+  let isFirstGroup = true;
+  groups.forEach(g => {
+    const groupCls  = g.isIncome === true ? 'sg-income' : g.isIncome === false ? 'sg-expense' : 'sg-neutral';
+    const firstCls  = isFirstGroup ? ' smg-first' : '';
+    isFirstGroup = false;
+
+    const nonZeroArticles  = g.articles.filter(a => Math.abs(a.total) >= 0.01);
+    const groupIsAllZero   = nonZeroArticles.length === 0;
+    const grpHideStyle     = (hideZeros && groupIsAllZero) ? ' style="display:none"' : '';
+
+    html += `<tr class="${groupCls} smg-row${firstCls}"${grpHideStyle}>`;
+    html += `<td>${escHtml(g.name)}</td>`;
+    html += `<td>${renderSummaryCell(g.subtotalTotal)}</td>`;
+    html += `<td>${renderPctCell(g.subtotalTotal, totalIncome, true)}</td>`;
+    stores.forEach(s => {
+      html += `<td>${renderSummaryCell(g.subtotals[s] || 0)}</td>`;
+    });
+    html += `</tr>`;
+
+    let artRowIdx = 0;
+    g.articles.forEach((a, aIdx) => {
+      const isZero      = Math.abs(a.total) < 0.01;
+      const rowBg       = (artRowIdx % 2 === 0) ? '#fff' : '#F9FAFB';
+      artRowIdx++;
+      const isLastInGroup  = aIdx === g.articles.length - 1;
+      const lastCls        = isLastInGroup ? ' sma-last' : '';
+      const totalBg        = a.total > 0 ? '#F0FDF4' : (a.total < 0 ? '#FFF5F5' : '');
+      const totalBgStyle   = totalBg ? ` background:${totalBg};` : '';
+      const rowHideStyle   = (hideZeros && isZero) ? 'display:none;' : '';
+      const rowHideData    = isZero ? ' data-zero="1"' : '';
+
+      // Определяем тип сдвига для подсветки
+      const isAdvance    = GULZHAN_ADVANCE_ARTICLES.has(a.name);
+      const isPrevMonth  = GULZHAN_PREV_MONTH_ARTICLES.has(a.name);
+      const articleCls   = isAdvance ? ' gul-advance' : isPrevMonth ? ' gul-prevmonth' : '';
+      const shiftLabel   = isAdvance
+        ? `<span class="gul-shift-label">▲ данные за ${escHtml(prevMonthName)}${prevLoading ? ' …' : ''}</span>`
+        : isPrevMonth
+        ? `<span class="gul-shift-label">▼ данные за ${escHtml(nextMonthName)}${nextLoading ? ' …' : allMonthsLoaded[currentMonth + 1] !== 'done' ? ' (не загружено)' : ''}</span>`
+        : '';
+
+      html += `<tr class="sma-row${lastCls}"${rowHideData} style="${rowHideStyle}background:${rowBg}">`;
+      html += `<td class="${articleCls}" style="background:${isAdvance || isPrevMonth ? '' : rowBg}">${escHtml(a.name)}${shiftLabel}</td>`;
+      html += `<td style="${totalBgStyle}font-weight:700">${renderSummaryCell(a.total)}</td>`;
+      html += `<td style="background:${rowBg}">${renderPctCell(a.total, totalIncome, false)}</td>`;
+      if (a.isCompanyWide) {
+        html += `<td colspan="${stores.length}" style="text-align:center">${renderSummaryCell(a.total)}</td>`;
+      } else {
+        stores.forEach(s => {
+          html += `<td>${renderSummaryCell(a.byStore[s] || 0)}</td>`;
+        });
+      }
+      html += `</tr>`;
+    });
+  });
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+}
+
+function toggleGulzhanZeros() {
+  const hide = document.getElementById('gulzhanHideZeros').checked;
+  document.querySelectorAll('#gulzhanWrap tr.sma-row[data-zero="1"]').forEach(tr => {
+    tr.style.display = hide ? 'none' : '';
+  });
+  document.querySelectorAll('#gulzhanWrap tr.smg-row').forEach(grpTr => {
+    let hasVisible = false;
+    let el = grpTr.nextElementSibling;
+    while (el && el.classList.contains('sma-row')) {
+      if (el.dataset.zero !== '1' || el.style.display !== 'none') { hasVisible = true; break; }
+      el = el.nextElementSibling;
+    }
+    grpTr.style.display = (hide && !hasVisible) ? 'none' : '';
+  });
+}
+
 // ─── MATRIX TABLE ─────────────────────────────────────
 function renderMatrixTable() {
   const wrap = document.getElementById('matrixWrap');
