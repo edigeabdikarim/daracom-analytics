@@ -871,35 +871,74 @@ function renderStoreGrid() {
   if (stores.length === 0) { grid.innerHTML = '<p class="text-gray-400 text-sm">Нет данных</p>'; return; }
 
   grid.innerHTML = stores.map(([name, d]) => {
+    const isOffice = OFFICE_STORES.has(name);
     const salesTotal = d.salesInc - d.salesOut;
+    // Для торговых: исключаем Возвраты товаров (salesOut) из отображаемых Выбытий
+    const displayOut = isOffice ? d.out : d.out - d.salesOut;
     const cf = d.inc - d.out;
     const cfColor = cf >= 0 ? '#10B981' : '#EF4444';
 
-    // % затрат (выбытия / продажи)
-    const pct = salesTotal > 0 ? d.out / salesTotal * 100 : 0;
+    // % затрат (displayOut / salesTotal) — только для торговых
+    const pct = salesTotal > 0 ? displayOut / salesTotal * 100 : 0;
     const pctColor = pct < 80 ? '#059669' : pct < 100 ? '#D97706' : '#DC2626';
     const pctBg   = pct < 80 ? '#D1FAE5' : pct < 100 ? '#FEF3C7' : '#FEE2E2';
     const barFill = Math.min(pct, 100).toFixed(1);
 
-    // Разбивка выбытий по группам статей
-    const groups = Object.entries(d.groups)
-      .sort((a, b) => b[1] - a[1]);
+    const groups    = Object.entries(d.groups).sort((a, b) => b[1] - a[1]);
+    const incGroups = Object.entries(d.incGroups).sort((a, b) => b[1] - a[1]);
 
+    // Таблица расходных групп: для торговых — с %, для офисных — без %
     const groupRows = groups.map(([grpName, amt]) => {
       const gp = salesTotal > 0 ? (amt / salesTotal * 100).toFixed(0) : '0';
-      const bw = d.out > 0 ? Math.min(Math.round(amt / d.out * 100), 100) : 0;
-      return `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:11px;">
-        <span style="flex:1;color:#6B7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(grpName)}</span>
-        <div style="width:32px;height:3px;background:#F3F4F6;border-radius:2px;flex-shrink:0;"><div style="height:3px;border-radius:2px;background:#EF4444;width:${bw}%"></div></div>
-        <span style="color:#EF4444;font-weight:600;white-space:nowrap;">${fmtShort(amt)}</span>
-        <span style="color:#6B7280;font-weight:700;white-space:nowrap;min-width:28px;text-align:right;">${gp}%</span>
-      </div>`;
+      return isOffice
+        ? `<tr>
+            <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(grpName)}</td>
+            <td style="padding:3px 6px;color:#EF4444;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
+          </tr>`
+        : `<tr>
+            <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(grpName)}</td>
+            <td style="padding:3px 6px;color:#EF4444;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
+            <td style="padding:3px 6px;color:#6B7280;font-weight:700;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${gp}%</td>
+          </tr>`;
     }).join('');
 
+    // Таблица поступлений по группам (только офисные, без %)
+    const incGroupRows = incGroups.map(([grpName, amt]) =>
+      `<tr>
+        <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(grpName)}</td>
+        <td style="padding:3px 6px;color:#10B981;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
+      </tr>`
+    ).join('');
+
+    if (isOffice) {
+      // ── Офисная карточка ──────────────────────────────────
+      return `<div class="store-card" data-store="${escHtml(name)}" onclick="openDrillStore(this.dataset.store)">
+        <div class="store-name">${escHtml(shortStoreName(name))}</div>
+        <div class="store-row"><span class="store-row-label">Выбытия</span><span class="store-row-val" style="color:#EF4444">${fmt(d.out)}</span></div>
+        <div class="store-row" style="margin-top:8px;padding-top:8px;border-top:1px solid #F3F4F6">
+          <span class="store-row-label font-semibold">Чистый CF</span>
+          <span class="store-row-val" style="color:${cfColor}">${cf >= 0 ? '+' : ''}${fmt(cf)}</span>
+        </div>
+        ${incGroups.length ? `
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #F3F4F6;">
+          <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">Поступления по группам</div>
+          <table style="width:100%;border-collapse:collapse;">${incGroupRows}</table>
+        </div>
+        ` : ''}
+        ${groups.length ? `
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #F3F4F6;">
+          <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">Выбытия по группам</div>
+          <table style="width:100%;border-collapse:collapse;">${groupRows}</table>
+        </div>
+        ` : ''}
+      </div>`;
+    }
+
+    // ── Торговая карточка ─────────────────────────────────
     return `<div class="store-card" data-store="${escHtml(name)}" onclick="openDrillStore(this.dataset.store)">
       <div class="store-name">${escHtml(shortStoreName(name))}</div>
       <div class="store-row"><span class="store-row-label">Продажи</span><span class="store-row-val" style="color:#10B981">${fmt(salesTotal)}</span></div>
-      <div class="store-row"><span class="store-row-label">Выбытия</span><span class="store-row-val" style="color:#EF4444">${fmt(d.out)}</span></div>
+      <div class="store-row"><span class="store-row-label">Выбытия</span><span class="store-row-val" style="color:#EF4444">${fmt(displayOut)}</span></div>
       <div class="store-row" style="margin-top:8px;padding-top:8px;border-top:1px solid #F3F4F6">
         <span class="store-row-label font-semibold">Чистый CF</span>
         <span class="store-row-val" style="color:${cfColor}">${cf >= 0 ? '+' : ''}${fmt(cf)}</span>
@@ -915,7 +954,7 @@ function renderStoreGrid() {
         </div>
         ${groups.length ? `
           <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">Выбытия по группам</div>
-          ${groupRows}
+          <table style="width:100%;border-collapse:collapse;">${groupRows}</table>
         ` : ''}
       </div>
       ` : ''}
