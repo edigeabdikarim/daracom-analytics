@@ -1605,7 +1605,7 @@ function buildQuarterlyRows(article, storeSet, month) {
   const q       = Math.ceil(month / 3);
   const qStart  = q * 3 - 2;
   const qMonths = [qStart, qStart + 1, qStart + 2];
-  const payM    = q * 3 + 1;
+  const payM    = quarterPaymentMonth(month);
 
   if (payM > 12) return [];               // Q4 — следующий год, нет данных
 
