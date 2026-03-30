@@ -1868,7 +1868,7 @@ function renderGulzhanMatrix() {
         : '';
 
       html += `<tr class="sma-row${lastCls}"${rowHideData} style="${rowHideStyle}background:${rowBg}">`;
-      html += `<td class="${articleCls}" style="background:${isAdvance || isPrevMonth ? '' : rowBg}">${escHtml(a.name)}${shiftLabel}</td>`;
+      html += `<td class="${articleCls}" style="background:${isAdvance || isPrevMonth || isQuarterlyOnly || isMixed ? '' : rowBg}">${escHtml(a.name)}${shiftLabel}</td>`;
       html += `<td style="${totalBgStyle}font-weight:700">${renderSummaryCell(a.total)}</td>`;
       html += `<td style="background:${rowBg}">${renderPctCell(a.total, totalIncome, false)}</td>`;
       if (a.isCompanyWide) {
