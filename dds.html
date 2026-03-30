@@ -232,6 +232,14 @@
       .summary-tbl th:first-child, .summary-tbl th:last-child { border-color: #1E3A5F; }
       .sg-income td, .sg-expense td, .sg-neutral td { border-top-color: #1E3A5F !important; border-bottom-color: #1E3A5F !important; }
       .sma-last td { border-bottom-color: #1E3A5F !important; }
+      /* По магазинам — печать */
+      #storesPrintHeader { display: block !important; }
+      #storeGrid .store-card { page-break-inside: avoid; break-inside: avoid; color: #111 !important; }
+      #storeGrid .store-card td,
+      #storeGrid .store-card span,
+      #storeGrid .store-card div { color: inherit; }
+      #storeGrid .store-name { color: #111 !important; }
+      #storeGrid { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
@@ -421,6 +429,19 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="section-title" style="margin-bottom:0">По магазинам</h2>
           <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+        </div>
+        <div id="storesPrintHeader" style="display:none;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid #1E3A5F;">
+          <div style="font-size:16px;font-weight:700;color:#1E3A5F;margin-bottom:8px;">ДДС · Daracom — По магазинам</div>
+          <div style="display:flex;gap:32px;">
+            <div>
+              <div style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">Остаток на начало месяца</div>
+              <div style="font-size:13px;font-weight:700;color:#1E3A5F;" id="sprintBalOpen">—</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">Остаток на конец месяца</div>
+              <div style="font-size:13px;font-weight:700;color:#1E3A5F;" id="sprintBalClose">—</div>
+            </div>
+          </div>
         </div>
         <div class="store-grid" id="storeGrid"></div>
       </div>
@@ -960,6 +981,12 @@ function renderStoreGrid() {
       ` : ''}
     </div>`;
   }).join('');
+  // Заполняем блок остатков для печати
+  const sprintBal = monthlyBalance ? calcBalance(currentMonth) : null;
+  const sprintOpen  = document.getElementById('sprintBalOpen');
+  const sprintClose = document.getElementById('sprintBalClose');
+  if (sprintOpen && sprintBal)  sprintOpen.textContent  = fmt(sprintBal.balanceStart) + ' ₸';
+  if (sprintClose && sprintBal) sprintClose.textContent = fmt(sprintBal.balanceEnd)   + ' ₸';
 }
 
 
