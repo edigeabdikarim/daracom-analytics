@@ -669,6 +669,7 @@ function renderAll() {
   renderExpensesSection();
   renderStoreGrid();
   renderSummaryMatrix();
+  renderGulzhanMatrix();
 }
 
 // ─── KPI ──────────────────────────────────────────────
@@ -1175,6 +1176,11 @@ function loadAllMonths() {
 }
 
 function _refreshAfterMonthLoad() {
+  const gulzhanSection = document.getElementById('section-gulzhan');
+  if (gulzhanSection && gulzhanSection.classList.contains('active')) {
+    renderGulzhanMatrix();
+    return;
+  }
   if (expensesTab === 'table') { renderMatrixTable(); return; }
   renderArticlesTable();
 }
@@ -2004,6 +2010,9 @@ function setSection(name) {
   if (name === 'expenses') loadAllMonths();
   if (name === 'summary' && !document.getElementById('stateContent').classList.contains('hidden')) {
     renderSummaryMatrix();
+  }
+  if (name === 'gulzhan' && !document.getElementById('stateContent').classList.contains('hidden')) {
+    renderGulzhanMatrix();
   }
 }
 
