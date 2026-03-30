@@ -1751,9 +1751,13 @@ function renderGulzhanMatrix() {
   const wrap = document.getElementById('gulzhanWrap');
   if (!wrap) return;
   if (document.getElementById('stateContent').classList.contains('hidden')) return;
-  // Запускаем загрузку смежных месяцев (не блокируем рендер)
+  // Запускаем загрузку смежных и квартальных месяцев (не блокируем рендер)
   ensureMonthLoaded(currentMonth - 1);
   ensureMonthLoaded(currentMonth + 1);
+  const _qPayM = quarterPaymentMonth(currentMonth);
+  if (_qPayM <= 12) ensureMonthLoaded(_qPayM);
+  const _qStart = Math.ceil(currentMonth / 3) * 3 - 2;
+  [_qStart, _qStart + 1, _qStart + 2].forEach(m => { if (m >= 1 && m <= 12) ensureMonthLoaded(m); });
 
   const { stores, groups, totalIncome } = buildGulzhanData(currentMonth);
   if (stores.length === 0) {
@@ -1844,13 +1848,23 @@ function renderGulzhanMatrix() {
       const rowHideData    = isZero ? ' data-zero="1"' : '';
 
       // Определяем тип сдвига для подсветки
-      const isAdvance    = GULZHAN_ADVANCE_ARTICLES.has(a.name);
-      const isPrevMonth  = GULZHAN_PREV_MONTH_ARTICLES.has(a.name);
-      const articleCls   = isAdvance ? ' gul-advance' : isPrevMonth ? ' gul-prevmonth' : '';
-      const shiftLabel   = isAdvance
+      const isAdvance        = GULZHAN_ADVANCE_ARTICLES.has(a.name);
+      const isPrevMonth      = GULZHAN_PREV_MONTH_ARTICLES.has(a.name);
+      const isQuarterlyOnly  = GULZHAN_QUARTERLY_STORES.hasOwnProperty(a.name) && !GULZHAN_PREVMONTH_STORES.hasOwnProperty(a.name);
+      const isMixed          = GULZHAN_PREVMONTH_STORES.hasOwnProperty(a.name);
+      const articleCls       = isAdvance       ? ' gul-advance'
+                             : isPrevMonth      ? ' gul-prevmonth'
+                             : isQuarterlyOnly  ? ' gul-quarterly'
+                             : isMixed          ? ' gul-mixed'
+                             : '';
+      const shiftLabel       = isAdvance
         ? `<span class="gul-shift-label">▲ данные за ${escHtml(prevMonthName)}${prevLoading ? ' …' : ''}</span>`
         : isPrevMonth
         ? `<span class="gul-shift-label">▼ данные за ${escHtml(nextMonthName)}${nextLoading ? ' …' : allMonthsLoaded[currentMonth + 1] !== 'done' ? ' (не загружено)' : ''}</span>`
+        : isQuarterlyOnly
+        ? `<span class="gul-shift-label">◇ квартальные пропорции</span>`
+        : isMixed
+        ? `<span class="gul-shift-label">◆ сдвиг по части магазинов</span>`
         : '';
 
       html += `<tr class="sma-row${lastCls}"${rowHideData} style="${rowHideStyle}background:${rowBg}">`;
