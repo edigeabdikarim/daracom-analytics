@@ -839,21 +839,28 @@ function renderArticlesTable() {
 // ─── STORE GRID ───────────────────────────────────────
 // По магазинам = группировка всех строк (activity!=='Техническая операция') по store
 function renderStoreGrid() {
+  const OFFICE_STORES = new Set(['Компания', 'Офис']);
   const EXCLUDED_STORE_GROUPS = new Set(['Платежи', 'Основные средства', 'Финансирование', 'Продажи']);
   const storeMap = {};
   filteredRows.forEach(r => {
     if (r.activity === 'Техническая операция' || !r.store) return;
-    if (!storeMap[r.store]) storeMap[r.store] = { inc: 0, out: 0, salesInc: 0, salesOut: 0, groups: {} };
+    const isOffice = OFFICE_STORES.has(r.store);
+    if (!storeMap[r.store]) storeMap[r.store] = { inc: 0, out: 0, salesInc: 0, salesOut: 0, groups: {}, incGroups: {} };
     const grp = ARTICLE_GROUP[r.article] || 'Прочее';
     if (r.type === 'Поступление') {
       storeMap[r.store].inc += r.amount;
-      if (grp === 'Продажи') storeMap[r.store].salesInc += r.amount;
+      if (grp === 'Продажи') {
+        storeMap[r.store].salesInc += r.amount;
+      } else if (isOffice) {
+        storeMap[r.store].incGroups[grp] = (storeMap[r.store].incGroups[grp] || 0) + r.amount;
+      }
     }
     if (r.type === 'Выбытие') {
       const amt = Math.abs(r.amount);
       storeMap[r.store].out += amt;
       if (grp === 'Продажи') storeMap[r.store].salesOut += amt;
-      if (!EXCLUDED_STORE_GROUPS.has(grp)) {
+      // Breakdown: для офисных без фильтра групп, для торговых — с EXCLUDED_STORE_GROUPS
+      if (isOffice || !EXCLUDED_STORE_GROUPS.has(grp)) {
         storeMap[r.store].groups[grp] = (storeMap[r.store].groups[grp] || 0) + amt;
       }
     }
