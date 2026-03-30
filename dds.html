@@ -312,6 +312,9 @@
       <div class="nav-item" onclick="setSection('summary')" id="nav-summary">
         <span class="nav-icon">📋</span> Сводная
       </div>
+      <div class="nav-item" onclick="setSection('gulzhan')" id="nav-gulzhan">
+        <span class="nav-icon">👩‍💼</span> ДДС Гульжан А.
+      </div>
       <div class="nav-item" onclick="setSection('stores')" id="nav-stores">
         <span class="nav-icon">🏪</span> По магазинам
       </div>
@@ -426,6 +429,43 @@
           </div>
         </div>
         <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;overflow-x:auto;" id="summaryWrap">
+          <p style="padding:24px;color:#9CA3AF;text-align:center;">Выберите месяц для загрузки данных</p>
+        </div>
+      </div>
+
+      <!-- ── РАЗДЕЛ: ДДС ГУЛЬЖАН А. ── -->
+      <div class="section" id="section-gulzhan">
+        <div id="gulzhanPrintHeader" style="display:none;padding-bottom:14px;border-bottom:2px solid #1E3A5F;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:17px;font-weight:700;color:#1E3A5F">ДДС · Daracom — Гульжан А. (с учётом периода)</div>
+              <div style="font-size:12px;color:#6B7280;margin-top:3px">Отчётный период: <span class="ph-month"></span></div>
+            </div>
+            <div style="display:flex;gap:16px" id="gulzhanPrintBalances"></div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <h2 class="section-title" style="margin-bottom:0">ДДС Гульжан А.</h2>
+            <div style="display:flex;gap:8px" id="gulzhanBalanceChips"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6B7280;cursor:pointer;">
+              <input type="checkbox" id="gulzhanHideZeros" checked onchange="toggleGulzhanZeros()" style="accent-color:#10B981;">
+              Скрыть нулевые
+            </label>
+            <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:6px;background:#FEF3C7;color:#92400E;font-weight:600;">
+            ▲ Оплата наперёд — данные предыдущего месяца
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:6px;background:#EDE9FE;color:#5B21B6;font-weight:600;">
+            ▼ Оплата за пред. месяц — данные следующего месяца
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;overflow-x:auto;" id="gulzhanWrap">
           <p style="padding:24px;color:#9CA3AF;text-align:center;">Выберите месяц для загрузки данных</p>
         </div>
       </div>
