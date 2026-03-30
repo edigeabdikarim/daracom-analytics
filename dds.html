@@ -624,6 +624,14 @@ function onDataLoaded(data) {
   allMonthsData[currentMonth] = allRows;
   allMonthsLoaded[currentMonth] = 'done';
   if (allRows.length === 0) {
+    // Gulzhan показывает авансовые данные даже без транзакций текущего месяца
+    const gulzhanActive = document.getElementById('section-gulzhan') &&
+      document.getElementById('section-gulzhan').classList.contains('active');
+    if (gulzhanActive) {
+      showState('content');
+      renderGulzhanMatrix();
+      return;
+    }
     document.getElementById('emptyMsg').textContent = 'Нет данных за ' + MONTH_NAMES[currentMonth - 1];
     showState('empty');
     return;
@@ -1621,11 +1629,6 @@ function renderGulzhanMatrix() {
   const wrap = document.getElementById('gulzhanWrap');
   if (!wrap) return;
   if (document.getElementById('stateContent').classList.contains('hidden')) return;
-  if (!allRows || allRows.length === 0) {
-    wrap.innerHTML = `<p style="padding:24px;color:#9CA3AF;text-align:center;">Нет данных за ${escHtml(MONTH_NAMES[currentMonth - 1])}</p>`;
-    return;
-  }
-
   // Запускаем загрузку смежных месяцев (не блокируем рендер)
   ensureMonthLoaded(currentMonth - 1);
   ensureMonthLoaded(currentMonth + 1);
