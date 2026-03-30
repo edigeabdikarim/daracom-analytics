@@ -1116,8 +1116,8 @@ const DDS_ARTICLES_ORDER = [
   { article: 'Канцтовары и расходные материалы',             group: 'IT и офис',                 isIncome: false },
   { article: 'Содержание офиса хоз товары, продукты',        group: 'IT и офис',                 isIncome: false },
   { article: 'Содержание торговых точек хоз тов, продукты',  group: 'IT и офис',                 isIncome: false },
-  { article: 'Услуги банка',                                 group: 'IT и офис',                 isIncome: false },
-  { article: 'Услуги банка Kaspi',                           group: 'IT и офис',                 isIncome: false },
+  { article: 'Услуги банка',                                 group: 'Налоги',                    isIncome: false },
+  { article: 'Услуги банка Kaspi',                           group: 'Налоги',                    isIncome: false },
   // ── Прочие расходы ──
   { article: 'Реставрация одежды',                           group: 'Прочие расходы',            isIncome: false },
   { article: 'Расходы Kaspi',                                group: 'Прочие расходы',            isIncome: false },
@@ -1141,6 +1141,10 @@ const DDS_ARTICLES_ORDER = [
   { article: 'Выдача кредитов и займов',                     group: 'Финансирование',            isIncome: false },
   { article: 'Проценты по полученным кредитам и займам',     group: 'Финансирование',            isIncome: false },
 ];
+
+// Lookup: article name → group name (built from DDS_ARTICLES_ORDER)
+const ARTICLE_GROUP = {};
+DDS_ARTICLES_ORDER.forEach(a => { ARTICLE_GROUP[a.article] = a.group; });
 
 // Группы со смешанным типом — нейтральный заголовок
 const DDS_GROUP_TYPES = {
