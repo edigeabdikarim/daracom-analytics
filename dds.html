@@ -1591,6 +1591,79 @@ function toggleSummaryZeros() {
 
 // ─── ДДС ГУЛЬЖАН А. — ЛОГИКА ДАННЫХ ──────────────────
 
+// Возвращает квартальный платёжный месяц для месяца M:
+// Q1(1-3)→4, Q2(4-6)→7, Q3(7-9)→10, Q4(10-12)→13 (вне диапазона = нет данных)
+function quarterPaymentMonth(month) {
+  return Math.ceil(month / 3) * 3 + 1;
+}
+
+// Строит синтетические строки квартального распределения для статьи article.
+// storeSet: Set магазинов для фильтрации, или null (все магазины).
+// month: текущий отображаемый месяц (1-12).
+// Результат: массив строк с пропорционально распределённой суммой.
+function buildQuarterlyRows(article, storeSet, month) {
+  const q       = Math.ceil(month / 3);
+  const qStart  = q * 3 - 2;
+  const qMonths = [qStart, qStart + 1, qStart + 2];
+  const payM    = q * 3 + 1;
+
+  if (payM > 12) return [];               // Q4 — следующий год, нет данных
+
+  // Инициируем загрузку нужных месяцев (не блокируем рендер)
+  ensureMonthLoaded(payM);
+  qMonths.forEach(m => { if (m >= 1 && m <= 12) ensureMonthLoaded(m); });
+
+  const payData = allMonthsData[payM];
+  if (!payData) return [];
+
+  // Платёжные строки по статье в платёжном месяце
+  const payRows = payData.filter(r => {
+    if (r.activity === 'Техническая операция') return false;
+    if (r.direction === 'Операция') return false;
+    if ((r.article || '').trim() !== article) return false;
+    if (storeSet !== null && !storeSet.has(r.store)) return false;
+    return true;
+  });
+  if (payRows.length === 0) return [];
+
+  // Суммируем платёж по магазину
+  const storePayments = {};
+  payRows.forEach(r => {
+    const s = r.store || 'Общее';
+    storePayments[s] = (storePayments[s] || 0) + Number(r.amount);
+  });
+
+  // Считаем продажи (Продажи товаров) магазина за каждый квартальный месяц
+  const storeSales = {}; // { store: { month: sum } }
+  qMonths.forEach(m => {
+    (allMonthsData[m] || []).forEach(r => {
+      if ((r.article || '').trim() !== 'Продажи товаров') return;
+      const s = r.store || 'Общее';
+      if (!storeSales[s]) storeSales[s] = {};
+      storeSales[s][m] = (storeSales[s][m] || 0) + Number(r.amount);
+    });
+  });
+
+  // Синтетические строки для текущего месяца month
+  const result = [];
+  Object.entries(storePayments).forEach(([store, payment]) => {
+    const salesByM    = storeSales[store] || {};
+    const totalSales  = qMonths.reduce((s, m) => s + (salesByM[m] || 0), 0);
+    if (totalSales === 0) return;  // нет продаж → нельзя рассчитать пропорцию
+    const monthSales  = salesByM[month] || 0;
+    const share       = payment * (monthSales / totalSales);
+    if (Math.abs(share) < 0.01) return;
+    result.push({
+      article, store,
+      amount: share,
+      activity: 'Операционная',
+      direction: 'Адм. расходы',
+      type: share > 0 ? 'Поступление' : 'Выбытие',
+    });
+  });
+  return result;
+}
+
 // Возвращает строки для статьи с учётом сдвига месяца:
 // advance → берём из month-1 (или из GULZHAN_DEC2025_RENT для января)
 // prevmonth → берём из month+1 (или пусто, если нет данных)
