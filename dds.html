@@ -726,6 +726,24 @@ function calcKPI(rows) {
   return { incoming, outgoing, netCF: incoming - outgoing, opExpenses };
 }
 
+// ─── WALLET CONSTANTS ─────────────────────────────────
+const CASH_WALLETS = [
+  { key: 'ИП Daracom Желтоксан нал',   label: 'Мира'          },
+  { key: 'ИП Daracom Above нал',        label: 'Above Алмата'  },
+  { key: 'ИП Ахметова нал',             label: 'Есентай'       },
+  { key: 'ИП Базарханова нал',          label: 'Абайка'        },
+  { key: 'ИП Нурсоветов нал',           label: 'Восход'        },
+  { key: 'ИП Абдыкарим нал',            label: 'Астана'        },
+  { key: 'ИП Daracom Above нал Астана', label: 'Above Астана'  },
+];
+const NONCASH_WALLETS = [
+  { keys: ['ИП Daracom б/н Мира', 'ИП Daracom б/н Above', 'ИП Daracom б/н Above Астана'], label: 'ИП Daracom' },
+  { key: 'ИП Ахметова б/н',    label: 'Есентай' },
+  { key: 'ИП Базарханова б/н', label: 'Абайка'  },
+  { key: 'ИП Нурсоветов б/н',  label: 'Восход'  },
+  { key: 'ИП Абдыкарим б/н',   label: 'Астана'  },
+];
+
 function renderKPI() {
   const { incoming, outgoing, netCF, opExpenses } = calcKPI(filteredRows);
   const cfClass = netCF >= 0 ? 'kpi-green' : 'kpi-red';
@@ -776,6 +794,74 @@ function renderKPI() {
       <div class="kpi-value">${fmt(opExpenses)}</div>
     </div>
   `;
+}
+
+// ─── WALLET BREAKDOWN ─────────────────────────────────
+function getWalletVal(entry, month) {
+  const m = monthlyBalance && monthlyBalance[month];
+  if (!m || !m.wallets) return 0;
+  if (entry.keys) return entry.keys.reduce(function(s, k) { return s + (m.wallets[k] || 0); }, 0);
+  return m.wallets[entry.key] || 0;
+}
+
+function renderWallets() {
+  const el = document.getElementById('walletsBlock');
+  if (!el) return;
+
+  if (!monthlyBalance || !monthlyBalance[currentMonth] || !monthlyBalance[currentMonth].wallets) {
+    el.style.display = 'none';
+    return;
+  }
+
+  const monthsWithData = monthlyBalance.monthsWithData || [];
+  const isCurrentMonth = monthsWithData.length === 0 || !monthsWithData.includes(currentMonth + 1);
+
+  function walletRow(entry) {
+    const valStart = getWalletVal(entry, currentMonth);
+    if (isCurrentMonth) {
+      return '<div class="wr-row">' +
+        '<span class="wr-label">' + entry.label + '</span>' +
+        '<span class="wr-val">' + fmt(valStart) + '</span>' +
+        '</div>';
+    }
+    const valEnd = getWalletVal(entry, currentMonth + 1);
+    return '<div class="wr-row">' +
+      '<span class="wr-label">' + entry.label + '</span>' +
+      '<span class="wr-pair">' +
+        '<span class="wr-start">' + fmt(valStart) + '</span>' +
+        '<span class="wr-arrow">→</span>' +
+        '<span class="wr-end">' + fmt(valEnd) + '</span>' +
+      '</span>' +
+      '</div>';
+  }
+
+  const cashTotal = CASH_WALLETS.reduce(function(s, e) { return s + getWalletVal(e, currentMonth); }, 0);
+  const noncashTotal = NONCASH_WALLETS.reduce(function(s, e) { return s + getWalletVal(e, currentMonth); }, 0);
+
+  el.style.display = '';
+  el.innerHTML =
+    '<div class="wr-header">' +
+      '<span class="wr-title">Остатки по кошелькам</span>' +
+      (isCurrentMonth ? '<span class="wr-badge">● Актуально</span>' : '') +
+    '</div>' +
+    '<div class="wr-cols">' +
+      '<div class="wr-col">' +
+        '<div class="wr-col-title">💵 Наличные</div>' +
+        CASH_WALLETS.map(walletRow).join('') +
+        '<div class="wr-row wr-total">' +
+          '<span class="wr-label">Итого</span>' +
+          '<span class="wr-val">' + fmt(cashTotal) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="wr-col">' +
+        '<div class="wr-col-title">🏦 Безналичные</div>' +
+        NONCASH_WALLETS.map(walletRow).join('') +
+        '<div class="wr-row wr-total">' +
+          '<span class="wr-label">Итого</span>' +
+          '<span class="wr-val">' + fmt(noncashTotal) + '</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
 }
 
 // ─── TOP-5 CHART ──────────────────────────────────────
