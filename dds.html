@@ -1501,7 +1501,7 @@ function buildSummaryData(rows) {
   // Фиксированный порядок магазинов: DDS_STORES_ORDER в приоритете, неизвестные — в конце алфавитно; «Компания» исключается
   const knownStores = new Set(DDS_STORES_ORDER);
   const extraStores = Object.keys(storeTurnover)
-    .filter(s => !knownStores.has(s) && s !== 'Компания')
+    .filter(s => !knownStores.has(s) && s !== 'Компания' && s !== 'Общее')
     .sort((a, b) => a.localeCompare(b, 'ru'));
   const stores = [
     ...DDS_STORES_ORDER.filter(s => storeTurnover[s]),
@@ -1524,12 +1524,6 @@ function buildSummaryData(rows) {
     groupsMap.get(a.group).articleNames.push(a.article);
   });
 
-  // Статьи не в списке → группа «Прочее»
-  const knownArticles = new Set(DDS_ARTICLES_ORDER.map(a => a.article));
-  const extraArticles = Object.keys(cellData).filter(art => !knownArticles.has(art));
-  if (extraArticles.length > 0) {
-    groupsMap.set('Прочее', { name: 'Прочее', isIncome: null, articleNames: extraArticles });
-  }
 
   // Формируем выходные группы
   const groups = [];
