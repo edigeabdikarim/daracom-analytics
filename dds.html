@@ -238,13 +238,7 @@
       #section-gulzhan.active,
       #section-summary.active,
       #section-stores.active { padding-top: 68px !important; }
-      .print-page-counter {
-        display: block !important;
-        position: fixed;
-        bottom: 8px; right: 16px;
-        font-size: 10px; color: #9CA3AF;
-      }
-      .print-page-counter::after { content: "Стр. " counter(page); }
+      @page { @bottom-right { content: "Стр. " counter(page); font-size: 9pt; color: #9CA3AF; } }
       .summary-tbl thead { display: table-header-group; }
       .summary-tbl th, .summary-tbl td { position: static !important; }
       .summary-tbl th, .summary-tbl td,
@@ -510,7 +504,6 @@
 
 
     </div><!-- /stateContent -->
-<div class="print-page-counter" style="display:none;"></div>
   </main>
 </div>
 
