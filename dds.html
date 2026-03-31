@@ -502,17 +502,8 @@
           <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
         </div>
         <div id="storesPrintHeader" style="display:none;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid #1E3A5F;">
-          <div style="font-size:16px;font-weight:700;color:#1E3A5F;margin-bottom:8px;">ДДС · Daracom — По магазинам</div>
-          <div style="display:flex;gap:32px;">
-            <div>
-              <div style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">Остаток на начало месяца</div>
-              <div style="font-size:13px;font-weight:700;color:#1E3A5F;" id="sprintBalOpen">—</div>
-            </div>
-            <div>
-              <div style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">Остаток на конец месяца</div>
-              <div style="font-size:13px;font-weight:700;color:#1E3A5F;" id="sprintBalClose">—</div>
-            </div>
-          </div>
+          <div style="font-size:16px;font-weight:700;color:#1E3A5F;">ДДС · Daracom — Магазины Гульжан А.</div>
+          <div style="font-size:12px;color:#6B7280;margin-top:3px;">Отчётный период: <span class="ph-month"></span></div>
         </div>
         <div class="store-grid" id="storeGrid"></div>
       </div>
@@ -1211,12 +1202,12 @@ function renderStoreGrid() {
     </div>`;
   }).join('');
 
-  // Заполняем блок остатков для печати
-  const sprintBal   = monthlyBalance ? calcBalance(currentMonth) : null;
-  const sprintOpen  = document.getElementById('sprintBalOpen');
-  const sprintClose = document.getElementById('sprintBalClose');
-  if (sprintOpen  && sprintBal) sprintOpen.textContent  = fmt(sprintBal.balanceStart) + ' ₸';
-  if (sprintClose && sprintBal) sprintClose.textContent = fmt(sprintBal.balanceEnd)   + ' ₸';
+  // Обновляем месяц в print-шапке
+  const storesPH = document.getElementById('storesPrintHeader');
+  if (storesPH) {
+    const monthSpan = storesPH.querySelector('.ph-month');
+    if (monthSpan) monthSpan.textContent = MONTH_NAMES[currentMonth - 1] + ' 2026';
+  }
 }
 
 
