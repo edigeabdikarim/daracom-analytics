@@ -87,20 +87,83 @@ function parseNumDDS(v) {
 }
 
 /**
- * Возвращает остатки на начало каждого месяца из листа «ДДС: Сводный».
- * Читает строку «Денег на начало месяца» (row 2), колонки B–M = месяцы 1–12.
- * Формат: { "1": { balance: N }, "2": { balance: N }, ... }
+ * Возвращает остатки на начало каждого месяца из листа «ДДС: Сводный»,
+ * а также остатки по каждому кошельку и список месяцев с транзакциями.
+ * Формат: { monthsWithData: [...], "1": { balance: N, wallets: {...} }, ... }
  */
 function getDDSBalanceSummary() {
   const ss = SpreadsheetApp.openById(DDS_SHEET_ID);
-  const sheet = ss.getSheetByName('ДДС: Сводный');
-  if (!sheet) throw new Error('Лист "ДДС: Сводный" не найден');
+  const svodny = ss.getSheetByName('ДДС: Сводный');
+  if (!svodny) throw new Error('Лист "ДДС: Сводный" не найден');
 
-  const balanceRow = sheet.getRange('B2:M2').getValues()[0];
-  const result = {};
-  for (let i = 0; i < 12; i++) {
-    result[i + 1] = { balance: parseNumDDS(balanceRow[i]) };
+  const WALLET_KEYS = [
+    'ИП Daracom Желтоксан нал',
+    'ИП Daracom Above нал',
+    'ИП Ахметова нал',
+    'ИП Базарханова нал',
+    'ИП Нурсоветов нал',
+    'ИП Абдыкарим нал',
+    'ИП Daracom Above нал Астана',
+    'ИП Daracom б/н Мира',
+    'ИП Daracom б/н Above',
+    'ИП Daracom б/н Above Астана',
+    'ИП Ахметова б/н',
+    'ИП Базарханова б/н',
+    'ИП Нурсоветов б/н',
+    'ИП Абдыкарим б/н',
+  ];
+
+  const svodnyData = svodny.getDataRange().getValues();
+  let balanceRow = null;
+  const walletRows = {};
+
+  for (let i = 0; i < svodnyData.length; i++) {
+    const label = String(svodnyData[i][0]).trim();
+    if (label === 'Денег на начало месяца') {
+      balanceRow = svodnyData[i];
+    } else if (WALLET_KEYS.includes(label)) {
+      walletRows[label] = svodnyData[i];
+    }
   }
+
+  if (!balanceRow) throw new Error('Строка "Денег на начало месяца" не найдена');
+
+  // Месяцы, в которых есть хотя бы одна транзакция
+  const monthSheet = ss.getSheetByName('ДДС: месяц');
+  const monthsWithData = new Set();
+  if (monthSheet) {
+    const txData = monthSheet.getDataRange().getValues();
+    let headerIdx = 2;
+    for (let i = 0; i < Math.min(6, txData.length); i++) {
+      const c2 = String(txData[i][2]);
+      if (c2.includes('цифрой') || c2 === 'Мсц (цифрой)') { headerIdx = i; break; }
+      if (String(txData[i][0]) === 'Месяц' && String(txData[i][1]) === 'Год') { headerIdx = i; break; }
+    }
+    for (let i = headerIdx + 1; i < txData.length; i++) {
+      const msc = parseInt(txData[i][2]);
+      const amount = parseNumDDS(txData[i][4]);
+      if (!isNaN(msc) && msc >= 1 && msc <= 12 &&
+          (amount !== 0 || String(txData[i][3]).trim())) {
+        monthsWithData.add(msc);
+      }
+    }
+  }
+
+  const result = {
+    monthsWithData: Array.from(monthsWithData).sort((a, b) => a - b)
+  };
+
+  for (let i = 0; i < 12; i++) {
+    const wallets = {};
+    WALLET_KEYS.forEach(function(key) {
+      wallets[key] = walletRows[key] ? parseNumDDS(walletRows[key][i + 1]) : 0;
+    });
+    result[i + 1] = {
+      balance: parseNumDDS(balanceRow[i + 1]),
+      wallets: wallets
+    };
+  }
+
   return result;
 }
 
