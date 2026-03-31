@@ -1106,7 +1106,7 @@ function renderStoreGrid() {
       .flatMap(g => {
         const amt       = Math.abs(g.subtotals[name] || 0);
         const shiftType = getGroupShiftType(g.name);
-        const isPending = (shiftType === 'prevmonth' || shiftType === 'quarterly' || shiftType === 'mixed') && amt < 0.01;
+        const isPending = groupHasShiftedArticles(g.name) && amt < 0.01;
         if (amt < 0.01 && !isPending) return [];
         return [{ label: g.name, amt, shiftType, isPending }];
       });
@@ -1307,6 +1307,11 @@ function _refreshAfterMonthLoad() {
   const gulzhanSection = document.getElementById('section-gulzhan');
   if (gulzhanSection && gulzhanSection.classList.contains('active')) {
     renderGulzhanMatrix();
+    return;
+  }
+  const storesSection = document.getElementById('section-stores');
+  if (storesSection && storesSection.classList.contains('active')) {
+    renderStoreGrid();
     return;
   }
   if (expensesTab === 'table') { renderMatrixTable(); return; }
