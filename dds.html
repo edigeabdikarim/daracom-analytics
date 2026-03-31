@@ -1671,18 +1671,6 @@ function renderSummaryMatrix() {
         <div class="bal-chip-value">${fmt(balanceEnd)} ₸</div>
       </div>`;
   }
-  const printBalEl = document.getElementById('summaryPrintBalances');
-  if (printBalEl) {
-    printBalEl.innerHTML = `
-      <div style="display:flex;flex-direction:column">
-        <span style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em">Остаток на начало</span>
-        <span style="font-size:13px;font-weight:700;color:#1E3A5F;margin-top:2px">${fmt(balanceStart)} ₸</span>
-      </div>
-      <div style="display:flex;flex-direction:column">
-        <span style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em">Остаток на конец</span>
-        <span style="font-size:13px;font-weight:700;color:#1E3A5F;margin-top:2px">${fmt(balanceEnd)} ₸</span>
-      </div>`;
-  }
 
   let html = `<table class="summary-tbl">`;
 
@@ -1967,18 +1955,6 @@ function renderGulzhanMatrix() {
       <div class="bal-chip">
         <div class="bal-chip-label">Кон. месяца</div>
         <div class="bal-chip-value">${fmt(balanceEnd)} ₸</div>
-      </div>`;
-  }
-  const printBalEl = document.getElementById('gulzhanPrintBalances');
-  if (printBalEl) {
-    printBalEl.innerHTML = `
-      <div style="display:flex;flex-direction:column">
-        <span style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em">Остаток на начало</span>
-        <span style="font-size:13px;font-weight:700;color:#1E3A5F;margin-top:2px">${fmt(balanceStart)} ₸</span>
-      </div>
-      <div style="display:flex;flex-direction:column">
-        <span style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em">Остаток на конец</span>
-        <span style="font-size:13px;font-weight:700;color:#1E3A5F;margin-top:2px">${fmt(balanceEnd)} ₸</span>
       </div>`;
   }
 
