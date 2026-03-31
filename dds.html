@@ -1017,6 +1017,8 @@ function renderStoreGrid() {
   const nextMonthName = currentMonth < 12 ? MONTH_NAMES[currentMonth] : '—';
   const RENT_ARTICLE_NAMES = DDS_ARTICLES_ORDER.filter(a => a.group === 'Аренда и ком. услуги').map(a => a.article);
   const rentGroup = gulGroups.find(g => g.name === 'Аренда и ком. услуги');
+  const TAX_ARTICLE_NAMES = DDS_ARTICLES_ORDER.filter(a => a.group === 'Налоги').map(a => a.article);
+  const taxGroup = gulGroups.find(g => g.name === 'Налоги');
   const sortedExpGroups = gulGroups
     .filter(g => !EXCLUDED_GROUPS.has(g.name) && g.name !== 'Аренда и ком. услуги' && g.name !== 'Налоги' && g.isIncome === false)
     .sort((a, b) => {
@@ -1102,8 +1104,6 @@ function renderStoreGrid() {
     }) : [];
 
     // Налоги: индивидуальные статьи (аналогично аренде)
-    const taxGroup = gulGroups.find(g => g.name === 'Налоги');
-    const TAX_ARTICLE_NAMES = DDS_ARTICLES_ORDER.filter(a => a.group === 'Налоги').map(a => a.article);
     const taxRows = taxGroup ? TAX_ARTICLE_NAMES.flatMap(artName => {
       const artObj = taxGroup.articles.find(a => a.name === artName);
       if (!artObj) return [];
