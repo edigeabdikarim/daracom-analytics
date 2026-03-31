@@ -1453,6 +1453,7 @@ const GULZHAN_PREV_MONTH_ARTICLES = new Set([
   'Зарплата СММ маркетинг, мерчандайзер',
   'Зарплата Водитель',
   'Налоги ЗП',
+  'Ком услуги',
 ]);
 
 // Статьи, где только часть магазинов берётся из M+1 (ключ = статья, значение = Set магазинов)
@@ -1523,7 +1524,6 @@ function buildSummaryData(rows) {
     }
     groupsMap.get(a.group).articleNames.push(a.article);
   });
-
 
   // Формируем выходные группы
   const groups = [];
