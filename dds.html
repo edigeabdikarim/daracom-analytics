@@ -930,97 +930,137 @@ const STORE_GROUP_ORDER = [
   'Прочие расходы',
 ];
 
-// По магазинам = группировка всех строк (activity!=='Техническая операция') по store
+// Shift-тип статьи для конкретного магазина
+function getArticleShiftType(articleName, storeName) {
+  if (GULZHAN_ADVANCE_ARTICLES.has(articleName)) return 'advance';
+  if (GULZHAN_PREV_MONTH_ARTICLES.has(articleName)) return 'prevmonth';
+  if (GULZHAN_PREVMONTH_STORES[articleName] && GULZHAN_PREVMONTH_STORES[articleName].has(storeName)) return 'prevmonth';
+  if (GULZHAN_QUARTERLY_STORES.hasOwnProperty(articleName)) {
+    const qStores = GULZHAN_QUARTERLY_STORES[articleName];
+    if (qStores === null || qStores.has(storeName)) return 'quarterly';
+  }
+  return null;
+}
+
+// Shift-тип группы (агрегированный по всем статьям группы)
+// Advance-статьи (аренда M-1) намеренно исключены — они обрабатываются per-article в renderStoreGrid
+function getGroupShiftType(groupName) {
+  const types = new Set();
+  DDS_ARTICLES_ORDER.forEach(a => {
+    if (a.group !== groupName) return;
+    if (GULZHAN_PREV_MONTH_ARTICLES.has(a.article) || GULZHAN_PREVMONTH_STORES[a.article]) types.add('prevmonth');
+    else if (GULZHAN_QUARTERLY_STORES.hasOwnProperty(a.article)) types.add('quarterly');
+  });
+  if (types.size === 0) return null;
+  if (types.size === 1) return [...types][0];
+  return 'mixed';
+}
+
+// Есть ли в группе хоть одна prevmonth/quarterly статья
+function groupHasShiftedArticles(groupName) {
+  return getGroupShiftType(groupName) !== null;
+}
+
+// По магазинам = торговые через buildGulzhanData(), офисные через filteredRows
 function renderStoreGrid() {
   const OFFICE_STORES = new Set(['Компания', 'Офис']);
-  const EXCLUDED_STORE_GROUPS = new Set(['Платежи', 'Основные средства', 'Финансирование', 'Продажи']);
-  const storeMap = {};
+  const EXCLUDED_GROUPS = new Set(['Платежи', 'Основные средства', 'Финансирование', 'Продажи']);
+
+  // Загружаем смежные месяцы для Gulzhan-логики
+  ensureMonthLoaded(currentMonth - 1);
+  ensureMonthLoaded(currentMonth + 1);
+  const _qPayM = quarterPaymentMonth(currentMonth);
+  if (_qPayM <= 12) ensureMonthLoaded(_qPayM);
+  const _qStart = Math.ceil(currentMonth / 3) * 3 - 2;
+  [_qStart, _qStart + 1, _qStart + 2].forEach(m => { if (m >= 1 && m <= 12) ensureMonthLoaded(m); });
+
+  // ── Офисные магазины: filteredRows (без изменений) ──────────────────
+  const officeMap = {};
   filteredRows.forEach(r => {
-    if (r.activity === 'Техническая операция' || !r.store) return;
-    const isOffice = OFFICE_STORES.has(r.store);
-    if (!storeMap[r.store]) storeMap[r.store] = { inc: 0, out: 0, salesInc: 0, salesOut: 0, groups: {}, incGroups: {}, rentArticles: {} };
+    if (r.activity === 'Техническая операция' || !r.store || !OFFICE_STORES.has(r.store)) return;
+    if (!officeMap[r.store]) officeMap[r.store] = { inc: 0, out: 0, groups: {}, incGroups: {} };
     const grp = ARTICLE_GROUP[r.article] || 'Прочее';
     if (r.type === 'Поступление') {
-      storeMap[r.store].inc += r.amount;
-      if (grp === 'Продажи') {
-        storeMap[r.store].salesInc += r.amount;
-      } else if (isOffice) {
-        storeMap[r.store].incGroups[grp] = (storeMap[r.store].incGroups[grp] || 0) + r.amount;
-      }
+      officeMap[r.store].inc += r.amount;
+      officeMap[r.store].incGroups[grp] = (officeMap[r.store].incGroups[grp] || 0) + r.amount;
     }
     if (r.type === 'Выбытие') {
       const amt = Math.abs(r.amount);
-      storeMap[r.store].out += amt;
-      if (grp === 'Продажи') storeMap[r.store].salesOut += amt;
-      // Breakdown: для офисных без фильтра групп, для торговых — с EXCLUDED_STORE_GROUPS
-      if (isOffice || !EXCLUDED_STORE_GROUPS.has(grp)) {
-        if (!isOffice && grp === 'Аренда и ком. услуги') {
-          storeMap[r.store].rentArticles[r.article] = (storeMap[r.store].rentArticles[r.article] || 0) + amt;
-        } else {
-          storeMap[r.store].groups[grp] = (storeMap[r.store].groups[grp] || 0) + amt;
-        }
-      }
+      officeMap[r.store].out += amt;
+      officeMap[r.store].groups[grp] = (officeMap[r.store].groups[grp] || 0) + amt;
     }
   });
 
-  const stores = Object.entries(storeMap).sort((a, b) => (b[1].inc + b[1].out) - (a[1].inc + a[1].out));
+  // ── Торговые магазины: buildGulzhanData ──────────────────────────────
+  const { stores: gulStores, groups: gulGroups } = buildGulzhanData(currentMonth);
+  const salesGroup = gulGroups.find(g => g.name === 'Продажи');
+
+  const tradeMap = {};
+  const expGroups = gulGroups.filter(g => !EXCLUDED_GROUPS.has(g.name) && g.isIncome === false);
+  gulStores.filter(s => !OFFICE_STORES.has(s)).forEach(store => {
+    const salesTotal = salesGroup ? (salesGroup.subtotals[store] || 0) : 0;
+    const displayOut = Math.abs(expGroups.reduce((s, g) => s + (g.subtotals[store] || 0), 0));
+    tradeMap[store] = { salesTotal, displayOut };
+  });
+
+  // ── Сортируем и объединяем ───────────────────────────────────────────
+  const tradeEntries  = Object.entries(tradeMap)
+    .sort((a, b) => (b[1].salesTotal + b[1].displayOut) - (a[1].salesTotal + a[1].displayOut));
+  const officeEntries = Object.entries(officeMap)
+    .sort((a, b) => (b[1].inc + b[1].out) - (a[1].inc + a[1].out));
+  const allStores = [...tradeEntries.map(([n]) => n), ...officeEntries.map(([n]) => n)];
+
   const grid = document.getElementById('storeGrid');
-  if (stores.length === 0) { grid.innerHTML = '<p class="text-gray-400 text-sm">Нет данных</p>'; return; }
+  if (allStores.length === 0) { grid.innerHTML = '<p class="text-gray-400 text-sm">Нет данных</p>'; return; }
 
+  const prevMonthName = currentMonth > 1 ? MONTH_NAMES[currentMonth - 2] : 'дек. 2025';
+  const nextMonthName = currentMonth < 12 ? MONTH_NAMES[currentMonth] : '—';
   const RENT_ARTICLE_NAMES = DDS_ARTICLES_ORDER.filter(a => a.group === 'Аренда и ком. услуги').map(a => a.article);
+  const rentGroup = gulGroups.find(g => g.name === 'Аренда и ком. услуги');
+  const sortedExpGroups = gulGroups
+    .filter(g => !EXCLUDED_GROUPS.has(g.name) && g.name !== 'Аренда и ком. услуги' && g.isIncome === false)
+    .sort((a, b) => {
+      const ai = STORE_GROUP_ORDER.indexOf(a.name);
+      const bi = STORE_GROUP_ORDER.indexOf(b.name);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
 
-  grid.innerHTML = stores.map(([name, d]) => {
+  // Хелперы для строк: CSS-класс и shift-лейбл
+  const rowCls = st =>
+    st === 'advance'    ? ' gul-advance'
+    : st === 'prevmonth'  ? ' gul-prevmonth'
+    : st === 'quarterly'  ? ' gul-quarterly'
+    : st === 'mixed'      ? ' gul-mixed'
+    : '';
+  const shiftLbl = st =>
+    st === 'advance'    ? `<span class="gul-shift-label">▲ ${escHtml(prevMonthName)}</span>`
+    : st === 'prevmonth'  ? `<span class="gul-shift-label">▼ ${escHtml(nextMonthName)}</span>`
+    : st === 'quarterly'  ? `<span class="gul-shift-label">◇ квартальные</span>`
+    : st === 'mixed'      ? `<span class="gul-shift-label">◆ сдвиг по части</span>`
+    : '';
+
+  grid.innerHTML = allStores.map(name => {
     const isOffice = OFFICE_STORES.has(name);
-    const salesTotal = d.salesInc - d.salesOut;
-    // Для торговых: исключаем Возвраты товаров (salesOut) из отображаемых Выбытий
-    const displayOut = isOffice ? d.out : d.out - d.salesOut;
-    const cf = d.inc - d.out;
-    const cfColor = cf >= 0 ? '#10B981' : '#EF4444';
 
-    // % затрат (displayOut / salesTotal) — только для торговых
-    const pct = salesTotal > 0 ? displayOut / salesTotal * 100 : 0;
-    const pctColor = pct < 80 ? '#059669' : pct < 100 ? '#D97706' : '#DC2626';
-    const pctBg   = pct < 80 ? '#D1FAE5' : pct < 100 ? '#FEF3C7' : '#FEE2E2';
-    const barFill = Math.min(pct, 100).toFixed(1);
-
-    const rentRows = isOffice ? [] : RENT_ARTICLE_NAMES
-      .filter(art => (d.rentArticles[art] || 0) > 0)
-      .map(art => [art, d.rentArticles[art]]);
-    const sortedGroups = isOffice
-      ? Object.entries(d.groups).sort((a, b) => b[1] - a[1])
-      : Object.entries(d.groups).sort((a, b) => {
-          const ai = STORE_GROUP_ORDER.indexOf(a[0]);
-          const bi = STORE_GROUP_ORDER.indexOf(b[0]);
-          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-        });
-    const groups    = [...rentRows, ...sortedGroups];
-    const incGroups = Object.entries(d.incGroups).sort((a, b) => b[1] - a[1]);
-
-    // Таблица расходных групп: для торговых — с %, для офисных — без %
-    const groupRows = groups.map(([grpName, amt]) => {
-      const gp = salesTotal > 0 ? (amt / salesTotal * 100).toFixed(0) : '0';
-      return isOffice
-        ? `<tr>
-            <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(grpName)}</td>
-            <td style="padding:3px 6px;color:#EF4444;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
-          </tr>`
-        : `<tr>
-            <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(grpName)}</td>
-            <td style="padding:3px 6px;color:#EF4444;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
-            <td style="padding:3px 6px;color:#6B7280;font-weight:700;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${gp}%</td>
-          </tr>`;
-    }).join('');
-
-    // Таблица поступлений по группам (только офисные, без %)
-    const incGroupRows = incGroups.map(([grpName, amt]) =>
-      `<tr>
-        <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(grpName)}</td>
-        <td style="padding:3px 6px;color:#10B981;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
-      </tr>`
-    ).join('');
-
+    // ── Офисная карточка ────────────────────────────────────────────────
     if (isOffice) {
-      // ── Офисная карточка ──────────────────────────────────
+      const d = officeMap[name];
+      const cf = d.inc - d.out;
+      const cfColor = cf >= 0 ? '#10B981' : '#EF4444';
+      const groups    = Object.entries(d.groups).sort((a, b) => b[1] - a[1]);
+      const incGroups = Object.entries(d.incGroups).sort((a, b) => b[1] - a[1]);
+      const groupRows = groups.map(([grpName, amt]) =>
+        `<tr>
+          <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(grpName)}</td>
+          <td style="padding:3px 6px;color:#EF4444;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
+        </tr>`
+      ).join('');
+      const incGroupRows = incGroups.map(([grpName, amt]) =>
+        `<tr>
+          <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(grpName)}</td>
+          <td style="padding:3px 6px;color:#10B981;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
+        </tr>`
+      ).join('');
       return `<div class="store-card" data-store="${escHtml(name)}" onclick="openDrillStore(this.dataset.store)">
         <div class="store-name">${escHtml(shortStoreName(name))}</div>
         <div class="store-row"><span class="store-row-label">Выбытия</span><span class="store-row-val" style="color:#EF4444">${fmt(d.out)}</span></div>
@@ -1032,18 +1072,64 @@ function renderStoreGrid() {
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid #F3F4F6;">
           <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">Поступления по группам</div>
           <table style="width:100%;border-collapse:collapse;">${incGroupRows}</table>
-        </div>
-        ` : ''}
+        </div>` : ''}
         ${groups.length ? `
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid #F3F4F6;">
           <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">Выбытия по группам</div>
           <table style="width:100%;border-collapse:collapse;">${groupRows}</table>
-        </div>
-        ` : ''}
+        </div>` : ''}
       </div>`;
     }
 
-    // ── Торговая карточка ─────────────────────────────────
+    // ── Торговая карточка (Gulzhan) ─────────────────────────────────────
+    const { salesTotal, displayOut } = tradeMap[name];
+    const cf       = salesTotal - displayOut;
+    const cfColor  = cf >= 0 ? '#10B981' : '#EF4444';
+    const pct      = salesTotal > 0 ? displayOut / salesTotal * 100 : 0;
+    const pctColor = pct < 80 ? '#059669' : pct < 100 ? '#D97706' : '#DC2626';
+    const pctBg    = pct < 80 ? '#D1FAE5' : pct < 100 ? '#FEF3C7' : '#FEE2E2';
+    const barFill  = Math.min(pct, 100).toFixed(1);
+
+    // Аренда: индивидуальные статьи
+    const rentRows = rentGroup ? RENT_ARTICLE_NAMES.flatMap(artName => {
+      const artObj = rentGroup.articles.find(a => a.name === artName);
+      if (!artObj) return [];
+      const amt       = Math.abs(artObj.byStore[name] || 0);
+      const shiftType = getArticleShiftType(artName, name);
+      const isPending = (shiftType === 'prevmonth' || shiftType === 'quarterly') && amt < 0.01;
+      if (amt < 0.01 && !isPending) return [];
+      return [{ label: artName, amt, shiftType, isPending }];
+    }) : [];
+
+    // Остальные группы (кроме аренды): одна строка на группу
+    const otherRows = sortedExpGroups
+      .flatMap(g => {
+        const amt       = Math.abs(g.subtotals[name] || 0);
+        const shiftType = getGroupShiftType(g.name);
+        const isPending = (shiftType === 'prevmonth' || shiftType === 'quarterly' || shiftType === 'mixed') && amt < 0.01;
+        if (amt < 0.01 && !isPending) return [];
+        return [{ label: g.name, amt, shiftType, isPending }];
+      });
+
+    const allRows = [...rentRows, ...otherRows];
+
+    const groupRows = allRows.map(({ label, amt, shiftType, isPending }) => {
+      const cls   = rowCls(shiftType);
+      const slbl  = shiftLbl(shiftType);
+      if (isPending) {
+        return `<tr class="${cls}">
+          <td style="padding:3px 6px;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(label)}${slbl}</td>
+          <td colspan="2" style="padding:3px 6px;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;color:#9CA3AF;white-space:nowrap;">⏳ ожидает оплаты</td>
+        </tr>`;
+      }
+      const gp = salesTotal > 0 ? (amt / salesTotal * 100).toFixed(0) : '0';
+      return `<tr class="${cls}">
+        <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(label)}${slbl}</td>
+        <td style="padding:3px 6px;color:#EF4444;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
+        <td style="padding:3px 6px;color:#6B7280;font-weight:700;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${gp}%</td>
+      </tr>`;
+    }).join('');
+
     return `<div class="store-card" data-store="${escHtml(name)}" onclick="openDrillStore(this.dataset.store)">
       <div class="store-name">${escHtml(shortStoreName(name))}</div>
       <div class="store-row"><span class="store-row-label">Продажи</span><span class="store-row-val" style="color:#10B981">${fmt(salesTotal)}</span></div>
@@ -1061,7 +1147,7 @@ function renderStoreGrid() {
         <div style="height:4px;background:#F3F4F6;border-radius:2px;margin-bottom:10px;">
           <div style="height:4px;border-radius:2px;background:${pctColor};width:${barFill}%;"></div>
         </div>
-        ${groups.length ? `
+        ${allRows.length ? `
           <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">Выбытия по группам</div>
           <table style="width:100%;border-collapse:collapse;">${groupRows}</table>
         ` : ''}
@@ -1069,11 +1155,12 @@ function renderStoreGrid() {
       ` : ''}
     </div>`;
   }).join('');
+
   // Заполняем блок остатков для печати
-  const sprintBal = monthlyBalance ? calcBalance(currentMonth) : null;
+  const sprintBal   = monthlyBalance ? calcBalance(currentMonth) : null;
   const sprintOpen  = document.getElementById('sprintBalOpen');
   const sprintClose = document.getElementById('sprintBalClose');
-  if (sprintOpen && sprintBal)  sprintOpen.textContent  = fmt(sprintBal.balanceStart) + ' ₸';
+  if (sprintOpen  && sprintBal) sprintOpen.textContent  = fmt(sprintBal.balanceStart) + ' ₸';
   if (sprintClose && sprintBal) sprintClose.textContent = fmt(sprintBal.balanceEnd)   + ' ₸';
 }
 
