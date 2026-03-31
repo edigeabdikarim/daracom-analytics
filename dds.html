@@ -1018,7 +1018,7 @@ function renderStoreGrid() {
   const RENT_ARTICLE_NAMES = DDS_ARTICLES_ORDER.filter(a => a.group === 'Аренда и ком. услуги').map(a => a.article);
   const rentGroup = gulGroups.find(g => g.name === 'Аренда и ком. услуги');
   const sortedExpGroups = gulGroups
-    .filter(g => !EXCLUDED_GROUPS.has(g.name) && g.name !== 'Аренда и ком. услуги' && g.isIncome === false)
+    .filter(g => !EXCLUDED_GROUPS.has(g.name) && g.name !== 'Аренда и ком. услуги' && g.name !== 'Налоги' && g.isIncome === false)
     .sort((a, b) => {
       const ai = STORE_GROUP_ORDER.indexOf(a.name);
       const bi = STORE_GROUP_ORDER.indexOf(b.name);
@@ -1101,7 +1101,20 @@ function renderStoreGrid() {
       return [{ label: artName, amt, shiftType, isPending }];
     }) : [];
 
-    // Остальные группы (кроме аренды): одна строка на группу
+    // Налоги: индивидуальные статьи (аналогично аренде)
+    const taxGroup = gulGroups.find(g => g.name === 'Налоги');
+    const TAX_ARTICLE_NAMES = DDS_ARTICLES_ORDER.filter(a => a.group === 'Налоги').map(a => a.article);
+    const taxRows = taxGroup ? TAX_ARTICLE_NAMES.flatMap(artName => {
+      const artObj = taxGroup.articles.find(a => a.name === artName);
+      if (!artObj) return [];
+      const amt       = Math.abs(artObj.byStore[name] || 0);
+      const shiftType = getArticleShiftType(artName, name);
+      const isPending = (shiftType === 'prevmonth' || shiftType === 'quarterly') && amt < 0.01;
+      if (amt < 0.01 && !isPending) return [];
+      return [{ label: artName, amt, shiftType, isPending }];
+    }) : [];
+
+    // Остальные группы (кроме аренды и налогов): одна строка на группу
     const otherRows = sortedExpGroups
       .flatMap(g => {
         const amt       = Math.abs(g.subtotals[name] || 0);
@@ -1111,24 +1124,44 @@ function renderStoreGrid() {
         return [{ label: g.name, amt, shiftType, isPending }];
       });
 
-    const allRows = [...rentRows, ...otherRows];
-
-    const groupRows = allRows.map(({ label, amt, shiftType, isPending }) => {
-      const cls   = rowCls(shiftType);
-      const slbl  = shiftLbl(shiftType);
+    // Хелпер рендера одной строки таблицы (с опциональным отступом)
+    const renderRow = ({ label, amt, shiftType, isPending }, indent) => {
+      const cls  = rowCls(shiftType);
+      const slbl = shiftLbl(shiftType);
+      const pl   = indent ? 'padding:3px 6px 3px 18px' : 'padding:3px 6px';
+      const tc   = indent ? '#6B7280' : '#374151';
       if (isPending) {
         return `<tr class="${cls}">
-          <td style="padding:3px 6px;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(label)}${slbl}</td>
+          <td style="${pl};font-size:11px;border-bottom:1px solid #E5E7EB;color:${tc};">${escHtml(label)}${slbl}</td>
           <td colspan="2" style="padding:3px 6px;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;color:#9CA3AF;white-space:nowrap;">⏳ ожидает оплаты</td>
         </tr>`;
       }
       const gp = salesTotal > 0 ? (amt / salesTotal * 100).toFixed(0) : '0';
       return `<tr class="${cls}">
-        <td style="padding:3px 6px;color:#374151;font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(label)}${slbl}</td>
+        <td style="${pl};color:${tc};font-size:11px;border-bottom:1px solid #E5E7EB;">${escHtml(label)}${slbl}</td>
         <td style="padding:3px 6px;color:#EF4444;font-weight:600;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(amt)}</td>
         <td style="padding:3px 6px;color:#6B7280;font-weight:700;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${gp}%</td>
       </tr>`;
-    }).join('');
+    };
+
+    // Рендер группы с заголовком и вложенными подстатьями
+    const renderGroupBlock = (groupName, rows) => {
+      if (rows.length === 0) return '';
+      const groupTotal = rows.reduce((s, r) => s + r.amt, 0);
+      const groupPct   = salesTotal > 0 ? (groupTotal / salesTotal * 100).toFixed(0) : '0';
+      const header = `<tr style="background:#F0F4F8;">
+        <td style="padding:3px 6px;font-size:11px;font-weight:700;color:#1E3A5F;border-bottom:1px solid #E5E7EB;">${escHtml(groupName)}</td>
+        <td style="padding:3px 6px;color:#EF4444;font-weight:700;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${fmtShort(groupTotal)}</td>
+        <td style="padding:3px 6px;color:#6B7280;font-weight:700;text-align:right;font-size:11px;border-bottom:1px solid #E5E7EB;white-space:nowrap;">${groupPct}%</td>
+      </tr>`;
+      return header + rows.map(r => renderRow(r, true)).join('');
+    };
+
+    const groupRows =
+      renderGroupBlock('Аренда и ком. услуги', rentRows) +
+      renderGroupBlock('Налоги', taxRows) +
+      otherRows.map(r => renderRow(r, false)).join('');
+    const hasGroupRows = rentRows.length > 0 || taxRows.length > 0 || otherRows.length > 0;
 
     return `<div class="store-card" data-store="${escHtml(name)}" onclick="openDrillStore(this.dataset.store)">
       <div class="store-name">${escHtml(shortStoreName(name))}</div>
@@ -1147,7 +1180,7 @@ function renderStoreGrid() {
         <div style="height:4px;background:#F3F4F6;border-radius:2px;margin-bottom:10px;">
           <div style="height:4px;border-radius:2px;background:${pctColor};width:${barFill}%;"></div>
         </div>
-        ${allRows.length ? `
+        ${hasGroupRows ? `
           <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">Выбытия по группам</div>
           <table style="width:100%;border-collapse:collapse;">${groupRows}</table>
         ` : ''}
