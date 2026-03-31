@@ -63,6 +63,26 @@
     .kpi-val-balance { color: #8B5CF6; }
     .kpi-val-balance.bal-neg { color: #EF4444; }
 
+    /* Wallet breakdown block */
+    .wr-block { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+    .wr-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .wr-title { font-size: 14px; font-weight: 700; color: #111827; }
+    .wr-badge { font-size: 11px; font-weight: 600; color: #10B981; background: #D1FAE5; padding: 2px 8px; border-radius: 20px; }
+    .wr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .wr-col-title { font-size: 12px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #F3F4F6; }
+    .wr-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 13px; border-bottom: 1px solid #F9FAFB; }
+    .wr-row:last-child { border-bottom: none; }
+    .wr-label { color: #374151; font-weight: 500; }
+    .wr-val { font-family: 'JetBrains Mono', 'Courier New', monospace; font-weight: 600; color: #111827; font-size: 13px; }
+    .wr-pair { display: flex; align-items: center; gap: 6px; }
+    .wr-start { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #6B7280; }
+    .wr-arrow { color: #9CA3AF; font-size: 12px; }
+    .wr-end { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; font-weight: 600; color: #111827; }
+    .wr-total { border-top: 2px solid #E5E7EB !important; border-bottom: none !important; margin-top: 4px; padding-top: 8px !important; }
+    .wr-total .wr-label { font-weight: 700; color: #111827; }
+    .wr-total .wr-val { font-size: 14px; color: #8B5CF6; }
+    @media (max-width: 640px) { .wr-cols { grid-template-columns: 1fr; } }
+
     /* Section */
     .section { display: none; }
     .section.active { display: block; }
@@ -392,6 +412,7 @@
           <button class="print-btn" onclick="window.print()">🖨️ Печать</button>
         </div>
         <div class="kpi-grid" id="kpiGrid"></div>
+        <div id="walletsBlock" class="wr-block" style="display:none;"></div>
       </div>
 
       <!-- ── РАЗДЕЛ 2: КУДА УШЛИ ДЕНЬГИ ── -->
