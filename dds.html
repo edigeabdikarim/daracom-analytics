@@ -1467,6 +1467,16 @@ const GULZHAN_QUARTERLY_STORES = {
   'Налоги ИП (квартальные)': null,
 };
 
+function isCellAlwaysPaid(articleName, storeName) {
+  if (GULZHAN_PREV_MONTH_ARTICLES.has(articleName)) return true;
+  if (GULZHAN_PREVMONTH_STORES[articleName] && GULZHAN_PREVMONTH_STORES[articleName].has(storeName)) return true;
+  if (GULZHAN_QUARTERLY_STORES.hasOwnProperty(articleName)) {
+    const qStores = GULZHAN_QUARTERLY_STORES[articleName];
+    if (qStores === null || qStores.has(storeName)) return true;
+  }
+  return false;
+}
+
 // Lookup: article name → group name (built from DDS_ARTICLES_ORDER)
 const ARTICLE_GROUP = {};
 DDS_ARTICLES_ORDER.forEach(a => { ARTICLE_GROUP[a.article] = a.group; });
@@ -1952,7 +1962,8 @@ function renderGulzhanMatrix() {
 
     let artRowIdx = 0;
     g.articles.forEach((a, aIdx) => {
-      const isZero      = Math.abs(a.total) < 0.01;
+      const hasAlwaysPaidCell = stores.some(s => isCellAlwaysPaid(a.name, s));
+      const isZero      = Math.abs(a.total) < 0.01 && !hasAlwaysPaidCell;
       const rowBg       = (artRowIdx % 2 === 0) ? '#fff' : '#F9FAFB';
       artRowIdx++;
       const isLastInGroup  = aIdx === g.articles.length - 1;
@@ -1990,7 +2001,11 @@ function renderGulzhanMatrix() {
         html += `<td colspan="${stores.length}" style="text-align:center">${renderSummaryCell(a.total)}</td>`;
       } else {
         stores.forEach(s => {
-          html += `<td>${renderSummaryCell(a.byStore[s] || 0)}</td>`;
+          if (isCellAlwaysPaid(a.name, s) && Math.abs(a.byStore[s] || 0) < 0.01) {
+            html += `<td style="text-align:center;color:#9CA3AF;font-size:11px;">⏳</td>`;
+          } else {
+            html += `<td>${renderSummaryCell(a.byStore[s] || 0)}</td>`;
+          }
         });
       }
       html += `</tr>`;
