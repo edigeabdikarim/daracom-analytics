@@ -1947,7 +1947,7 @@ function renderGulzhanMatrix() {
     const firstCls  = isFirstGroup ? ' smg-first' : '';
     isFirstGroup = false;
 
-    const nonZeroArticles  = g.articles.filter(a => Math.abs(a.total) >= 0.01);
+    const nonZeroArticles  = g.articles.filter(a => Math.abs(a.total) >= 0.01 || stores.some(s => isCellAlwaysPaid(a.name, s)));
     const groupIsAllZero   = nonZeroArticles.length === 0;
     const grpHideStyle     = (hideZeros && groupIsAllZero) ? ' style="display:none"' : '';
 
