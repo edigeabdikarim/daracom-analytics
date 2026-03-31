@@ -814,7 +814,8 @@ function renderWallets() {
   }
 
   const monthsWithData = monthlyBalance.monthsWithData || [];
-  const isCurrentMonth = monthsWithData.length === 0 || !monthsWithData.includes(currentMonth + 1);
+  const now = new Date().getMonth() + 1;
+  const isCurrentMonth = currentMonth >= now;
 
   function walletRow(entry) {
     const valStart = getWalletVal(entry, currentMonth);
