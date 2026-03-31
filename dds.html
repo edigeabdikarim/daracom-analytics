@@ -565,7 +565,7 @@ const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','
 function loadBalanceSummary() {
   const cacheKey = 'dds_balance_cache';
   // Версия логики — при смене сбрасываем кэш
-  const BALANCE_VERSION = 'v3-direct-from-svodny';
+  const BALANCE_VERSION = 'v4-with-wallets';
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
@@ -587,6 +587,7 @@ function loadBalanceSummary() {
       if (document.getElementById('stateContent').style.display !== 'none' &&
           !document.getElementById('stateContent').classList.contains('hidden')) {
         renderKPI();
+        renderWallets();
       }
     })
     .catch(() => { /* баланс не критичен */ });
@@ -698,6 +699,7 @@ function applyFilters() {
 // ─── RENDER ALL ───────────────────────────────────────
 function renderAll() {
   renderKPI();
+  renderWallets();
   renderExpensesSection();
   renderStoreGrid();
   renderSummaryMatrix();
