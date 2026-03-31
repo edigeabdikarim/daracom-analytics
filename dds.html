@@ -222,7 +222,29 @@
       .main-area { overflow: visible; padding: 0; }
       .app-layout { height: auto; overflow: visible; }
       #summaryWrap { overflow: visible !important; border: none !important; border-radius: 0 !important; }
-      #summaryPrintHeader { display: block !important; }
+      #summaryPrintHeader,
+      #gulzhanPrintHeader,
+      #storesPrintHeader {
+        display: block !important;
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        background: #fff;
+        padding: 10px 16px 8px;
+        z-index: 100;
+        border-bottom: 2px solid #1E3A5F !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      #section-gulzhan.active,
+      #section-summary.active,
+      #section-stores.active { padding-top: 68px !important; }
+      .print-page-counter {
+        display: block !important;
+        position: fixed;
+        bottom: 8px; right: 16px;
+        font-size: 10px; color: #9CA3AF;
+      }
+      .print-page-counter::after { content: "Стр. " counter(page); }
       .summary-tbl thead { display: table-header-group; }
       .summary-tbl th, .summary-tbl td { position: static !important; }
       .summary-tbl th, .summary-tbl td,
@@ -233,7 +255,6 @@
       .sg-income td, .sg-expense td, .sg-neutral td { border-top-color: #1E3A5F !important; border-bottom-color: #1E3A5F !important; }
       .sma-last td { border-bottom-color: #1E3A5F !important; }
       /* По магазинам — печать */
-      #storesPrintHeader { display: block !important; }
       #storeGrid .store-card { page-break-inside: avoid; break-inside: avoid; color: #111 !important; }
       #storeGrid .store-name { color: #111 !important; }
       #storeGrid { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -498,6 +519,7 @@
 
 
     </div><!-- /stateContent -->
+<div class="print-page-counter" style="display:none;"></div>
   </main>
 </div>
 
