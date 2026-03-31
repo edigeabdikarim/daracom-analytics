@@ -231,7 +231,6 @@
       }
       @page {
         @bottom-right { content: "Стр. " counter(page); font-size: 9pt; color: #9CA3AF; }
-        @top-right { content: "ДДС · Daracom"; font-size: 8pt; color: #9CA3AF; }
       }
       .summary-tbl thead { display: table-header-group; }
       .summary-tbl th, .summary-tbl td { position: static !important; }
@@ -2357,6 +2356,27 @@ const SUMMARY_STORE_DISPLAY = {
 function summaryStoreName(s) {
   return SUMMARY_STORE_DISPLAY[s] || s;
 }
+
+// ── Динамический @top-right при печати ──
+const SECTION_PRINT_TITLES = {
+  'section-summary': 'Сводная по статьям',
+  'section-gulzhan': 'Гульжан А.',
+  'section-stores':  'Магазины Гульжан А.',
+};
+let _printStyleEl = null;
+window.addEventListener('beforeprint', () => {
+  const activeSection = document.querySelector('.section.active');
+  const sectionId = activeSection ? activeSection.id : '';
+  const title = SECTION_PRINT_TITLES[sectionId] || 'ДДС · Daracom';
+  const month = MONTH_NAMES[currentMonth - 1] ? MONTH_NAMES[currentMonth - 1] + ' 2026' : '';
+  const label = month ? `ДДС · Daracom — ${title} · ${month}` : `ДДС · Daracom — ${title}`;
+  _printStyleEl = document.createElement('style');
+  _printStyleEl.textContent = `@page { @top-right { content: "${label}"; font-size: 8pt; color: #9CA3AF; } }`;
+  document.head.appendChild(_printStyleEl);
+});
+window.addEventListener('afterprint', () => {
+  if (_printStyleEl) { _printStyleEl.remove(); _printStyleEl = null; }
+});
 </script>
 
 </body>
