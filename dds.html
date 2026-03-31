@@ -226,19 +226,13 @@
       #section-gulzhan.active #gulzhanPrintHeader,
       #section-stores.active #storesPrintHeader {
         display: block !important;
-        position: fixed;
-        top: 0; left: 0; right: 0;
-        background: #fff;
-        padding: 10px 16px 8px;
-        z-index: 100;
-        border-bottom: 2px solid #1E3A5F !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
-      #section-gulzhan.active,
-      #section-summary.active,
-      #section-stores.active { padding-top: 68px !important; }
-      @page { @bottom-right { content: "Стр. " counter(page); font-size: 9pt; color: #9CA3AF; } }
+      @page {
+        @bottom-right { content: "Стр. " counter(page); font-size: 9pt; color: #9CA3AF; }
+        @top-right { content: "ДДС · Daracom"; font-size: 8pt; color: #9CA3AF; }
+      }
       .summary-tbl thead { display: table-header-group; }
       .summary-tbl th, .summary-tbl td { position: static !important; }
       .summary-tbl th, .summary-tbl td,
