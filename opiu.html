@@ -243,6 +243,49 @@
     return html;
   }
 
+  // ─── РЕНДЕР СТРОКИ ─────────────────────────────
+  function renderOpiuRow(row, type, stores, totalRevenue, storeRevenue, currentL2, artIdx) {
+    const label  = row.label;
+    const values = row.values;
+    const totalVal = values ? values['Итого'] : null;
+
+    // company-wide: для calc используем row.merged, для остальных — isCompanyWide()
+    const cw = (type === 'calc') ? !!row.merged : isCompanyWide(type, label, currentL2);
+
+    // CSS класс строки
+    const rowCls = {
+      l0: 'om-l0-row', l1: 'om-l1-row', l2: 'om-l2-row',
+      calc: 'om-calc-row',
+      article: 'om-article-row' + (artIdx % 2 === 1 ? ' om-alt' : '')
+    }[type] || 'om-article-row';
+
+    // Отступ для статей
+    const indent = type === 'article' ? ' style="padding-left:28px"' : '';
+
+    // Итого-ячейка
+    const totalCell = '<td class="om-td-total">' + buildOpiuCell(totalVal, totalRevenue, true) + '</td>';
+
+    let tr = '<tr class="' + rowCls + '">';
+    tr += '<td' + indent + '>' + escHtml(label) + '</td>';
+    tr += totalCell;
+
+    if (cw) {
+      // Company-wide: colspan по всем направлениям
+      tr += '<td colspan="' + stores.length + '" class="om-cw-cell">'
+          + buildOpiuCell(totalVal, totalRevenue, false) + '</td>';
+    } else {
+      // Per-direction
+      stores.forEach(function(s) {
+        const val = values ? values[s] : null;
+        const rev = storeRevenue[s] || 0;
+        tr += '<td>' + buildOpiuCell(val, rev, false) + '</td>';
+      });
+    }
+
+    tr += '</tr>';
+    return tr;
+  }
+
   // ─── STATE ─────────────────────────────────────
   let currentMonth = new Date().getMonth() + 1;
   let currentData = null;
