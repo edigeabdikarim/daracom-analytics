@@ -201,12 +201,11 @@
 
   <!-- ═══ CONTENT ═══ -->
   <main id="stateContent" class="hidden px-6 py-6 max-w-screen-2xl mx-auto">
-    <div class="pl-wrap">
-      <table class="pl-table" id="plTable">
-        <thead id="plHead"></thead>
-        <tbody id="plBody"></tbody>
-      </table>
+    <div id="opiuPrintHeader">
+      <span class="ph-title">ОПиУ · Daracom — Матрица</span>
+      <span class="ph-month" id="printMonth"></span>
     </div>
+    <div class="om-wrap" id="opiuMatrixWrap"></div>
   </main>
 
   <script>
@@ -379,7 +378,6 @@
   }
 
   // ─── CACHE ─────────────────────────────────────
-  const CACHE_YEAR = new Date().getFullYear();
   function cacheKey(m) { return 'daracom_opiu_' + CACHE_YEAR + '_' + m; }
 
   function refreshData() {
@@ -459,116 +457,21 @@
     }
     currentData = data;
 
-    // Header subtitle
+    // Подзаголовок header
     const d = new Date(ts);
     const hhmm = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-    document.getElementById('headerSub').textContent = MONTH_NAMES[data.month] + ' ' + CACHE_YEAR + ' · данные от ' + hhmm;
+    document.getElementById('headerSub').textContent =
+      MONTH_NAMES[data.month] + ' ' + CACHE_YEAR + ' · данные от ' + hhmm;
 
-    // Build revenue map: store → revenue value (for % calc per store)
-    const revenueMap = {};
-    const revRow = data.rows.find(r => r.label === 'Выручка');
-    if (revRow) {
-      data.stores.forEach(s => { revenueMap[s] = revRow.values[s] || 0; });
-      revenueMap['Итого'] = revRow.values['Итого'] || 0;
-    }
+    // Печатный заголовок
+    const pm = document.getElementById('printMonth');
+    if (pm) pm.textContent = '· ' + MONTH_NAMES[data.month] + ' ' + CACHE_YEAR;
 
-    const cols = [...data.stores]; // без Итого — он отдельно вторым
-
-    // Render thead: Метрика | Итого | store1 | store2 | ...
-    const thead = document.getElementById('plHead');
-    thead.innerHTML = '<tr>' +
-      '<th>Метрика</th>' +
-      '<th class="th-total">Итого</th>' +
-      cols.map(s => '<th>' + escHtml(s.replace('Магазин ', '')) + '</th>').join('') +
-      '</tr>';
-
-    // Render tbody
-    const tbody = document.getElementById('plBody');
-    tbody.innerHTML = data.rows.map(row => renderRow(row, cols, revenueMap)).join('');
+    // Рендер матрицы
+    const wrap = document.getElementById('opiuMatrixWrap');
+    wrap.innerHTML = renderOpiuMatrix(data);
 
     setState('content');
-  }
-
-  function renderRow(row, cols, revenueMap) {
-    const isGroup   = row.type === 'group';
-    const isMerged  = !!row.merged;
-    const isPct     = !!row.pct;
-    const noPercent = NO_PCT_LABELS.has(row.label) || row.parent === 'Выручка';
-
-    const bgCls  = isGroup ? (GROUP_BG[row.label] || '') : '';
-    const isNetGroup = isMerged && isGroup;
-    const isNetItem  = isMerged && !isGroup;
-
-    let rowCls;
-    if (isNetGroup)       rowCls = 'pl-row-net-group';
-    else if (isNetItem)   rowCls = 'pl-row-net-item';
-    else if (isGroup)     rowCls = 'pl-row-group ' + bgCls;
-    else                  rowCls = 'pl-row-item';
-
-    // ── Итого cell ──
-    const totalVal = row.values['Итого'];
-    const totalRevenue = revenueMap['Итого'] || 0;
-    const totalCell = buildCell(totalVal, totalRevenue, noPercent, isPct, true, isMerged);
-    const totalTd = '<td class="td-total">' + totalCell + '</td>';
-
-    if (isMerged) {
-      // Merged rows: colspan по всем магазинам
-      const spanVal  = totalVal !== null && totalVal !== undefined && totalVal !== 0 ? fmtShort(totalVal) : '';
-      const spanPct  = (!noPercent && totalRevenue > 0 && totalVal)
-        ? '<div class="cell-pct-net">(' + (totalVal / totalRevenue * 100).toFixed(1) + '%)</div>'
-        : '';
-      const spanContent = spanVal
-        ? '<div class="cell-val">' + spanVal + '</div>' + spanPct
-        : '';
-      const spanTd = '<td class="td-net-span" colspan="' + cols.length + '">' + spanContent + '</td>';
-
-      return '<tr class="' + rowCls + '">' +
-        '<td>' + escHtml(row.label) + '</td>' +
-        totalTd +
-        spanTd +
-        '</tr>';
-    }
-
-    // Normal rows: individual store cells
-    const storeCells = cols.map(col => {
-      const val = row.values[col];
-      const rev = revenueMap[col] || 0;
-      return '<td>' + buildCell(val, rev, noPercent, isPct, false, false) + '</td>';
-    }).join('');
-
-    return '<tr class="' + rowCls + '">' +
-      '<td>' + escHtml(row.label) + '</td>' +
-      totalTd +
-      storeCells +
-      '</tr>';
-  }
-
-  function buildCell(val, rev, noPercent, isPct, isTotal, isMerged) {
-    if (val === undefined || val === null || val === 0) {
-      return '<span class="cell-dash">—</span>';
-    }
-
-    // % строки (Рентабельность)
-    if (isPct) {
-      const pctStr = (val * 100).toFixed(1) + '%';
-      const color  = val < 0 ? '#EF4444' : '#10B981';
-      return '<div class="cell-val" style="color:' + color + '">' + pctStr + '</div>';
-    }
-
-    const fmtVal = fmtShort(val);
-
-    if (noPercent) {
-      return '<div class="cell-val">' + fmtVal + '</div>';
-    }
-
-    if (rev === 0) {
-      return '<span class="cell-dash">—</span>';
-    }
-
-    const pct = (val / rev * 100).toFixed(1);
-    const pctCls = isTotal ? 'cell-pct-total' : 'cell-pct';
-    return '<div class="cell-val">' + fmtVal + '</div>' +
-           '<div class="' + pctCls + '">(' + pct + '%)</div>';
   }
 
   function escHtml(s) {
