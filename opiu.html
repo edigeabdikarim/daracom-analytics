@@ -109,10 +109,17 @@
       border: 1px solid #D1D5DB; border-radius: 6px; cursor: pointer;
       transition: background 0.15s; font-family: 'Manrope', sans-serif; }
     .print-btn:hover { background: #E5E7EB; }
-    @page { size: A4 landscape; margin: 1cm; }
+    .om-print-title-row { display: none; }
+    @page { size: A4 landscape; margin: 1.5cm; }
     @media print {
-      header, .print-btn { display: none !important; }
-      #opiuPrintHeader { display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      header, .print-btn, #opiuPrintHeader { display: none !important; }
+      .om-print-title-row { display: table-row !important; }
+      .om-print-title-cell {
+        text-align: left !important; font-size: 13pt; font-weight: 700;
+        background: #fff !important; color: #111827 !important;
+        border: none !important; padding: 6px 0 6px 0 !important;
+        letter-spacing: 0 !important; text-transform: none !important;
+      }
       #stateContent { padding: 0 !important; }
       .om-wrap { overflow: visible !important; border: none !important; border-radius: 0 !important; }
       .om-table thead { display: table-header-group; }
@@ -165,6 +172,16 @@
       'Рентабельность по направлениям, %',
       'Рентабельность по валовой прибыли, %',
     ]);
+
+    const STORE_DISPLAY_NAMES = {
+      'Above':         'Above Алмата',
+      'Магазин Above': 'Above Алмата',
+    };
+
+    function storeDisplayName(s) {
+      if (STORE_DISPLAY_NAMES[s]) return STORE_DISPLAY_NAMES[s];
+      return s.replace('Магазин ', '');
+    }
   </script>
 
   <!-- ═══ HEADER ═══ -->
@@ -331,14 +348,29 @@
       storeRevenue[s] = revRow ? (revRow.values[s] || 0) : 0;
     });
 
+    var totalCols = 2 + stores.length;
+    var monthStr  = (MONTH_NAMES && data.month) ? MONTH_NAMES[data.month] + ' ' + CACHE_YEAR : '';
+
     // Thead
-    var html = '<table class="om-table"><thead><tr>';
+    var html = '<table class="om-table"><thead>';
+    // Заголовок отчёта (виден только при печати, повторяется на каждой странице)
+    html += '<tr class="om-print-title-row">';
+    html += '<th colspan="' + totalCols + '" class="om-print-title-cell">ОПиУ · Daracom — Матрица · ' + escHtml(monthStr) + '</th>';
+    html += '</tr>';
+    // Строка с названиями направлений
+    html += '<tr>';
     html += '<th class="om-th-metric">Метрика</th>';
     html += '<th class="om-th-total" style="text-align:right">Итого</th>';
     stores.forEach(function(s) {
-      html += '<th style="text-align:right">' + escHtml(s.replace('Магазин ', '')) + '</th>';
+      html += '<th style="text-align:right">' + escHtml(storeDisplayName(s)) + '</th>';
     });
-    html += '</tr></thead><tbody>';
+    html += '</tr>';
+    // Строка Выручки (закреплена в шапке, повторяется на каждой странице)
+    var revRow2 = rowByLabel['Выручка'];
+    if (revRow2) {
+      html += renderOpiuRow(revRow2, 'l0', stores, totalRevenue, storeRevenue, null, 0);
+    }
+    html += '</thead><tbody>';
 
     // Контекст итерации
     var currentL2  = null;
@@ -351,9 +383,12 @@
       if (OPIU_ROWS_SKIP.has(label)) return;
       var type  = classifyRow(label);
 
+      // Выручка уже в thead — пропускаем в tbody
+      if (type === 'l0') return;
+
       // Обновляем контекст
       if (type === 'l2')      { currentL2 = label; artIdx = 0; }
-      if (type === 'l0' || type === 'l1' || type === 'calc') { artIdx = 0; }
+      if (type === 'l1' || type === 'calc') { artIdx = 0; }
       if (type === 'article') { artIdx++; }
 
       // Для L1-групп: если в GAS нет значений — вычисляем
