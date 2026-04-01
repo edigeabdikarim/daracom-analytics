@@ -161,6 +161,11 @@
         'Операционная прибыль (EBITDA)'
       ])
     };
+    const OPIU_ROWS_SKIP = new Set([
+      'Рентабельность по маржинальному доходу, %',
+      'Рентабельность по направлениям, %',
+      'Рентабельность по валовой прибыли, %',
+    ]);
   </script>
 
   <!-- ═══ HEADER ═══ -->
@@ -340,9 +345,12 @@
     // Контекст итерации
     var currentL2  = null;
     var artIdx     = 0;  // счётчик для чередования строк в текущей L2-группе
+    var cutAfterEBITDA = false;
 
     rows.forEach(function(row) {
+      if (cutAfterEBITDA) return;
       var label = row.label;
+      if (OPIU_ROWS_SKIP.has(label)) return;
       var type  = classifyRow(label);
 
       // Обновляем контекст
@@ -358,6 +366,7 @@
       }
 
       html += renderOpiuRow(rowToRender, type, stores, totalRevenue, storeRevenue, currentL2, artIdx);
+      if (label === 'Операционная прибыль (EBITDA)') cutAfterEBITDA = true;
     });
 
     html += '</tbody></table>';
