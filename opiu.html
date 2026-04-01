@@ -96,9 +96,8 @@
     /* Value + pct */
     .om-val { font-weight: 600; }
     .om-val.om-negative { color: #DC2626; }
-    .om-pct { font-size: 10px; color: #9CA3AF; margin-top: 1px; }
-    .om-pct-total { font-size: 10px; color: #6EE7B7; margin-top: 1px; }
-    .om-zero { color: #D1D5DB; }
+    .om-pct { font-size: 10px; color: #374151; margin-top: 1px; }
+    .om-zero { color: #9CA3AF; }
 
     /* Print header */
     #opiuPrintHeader { display: none; margin-bottom: 12px; }
@@ -244,9 +243,8 @@
     const negCls = val < 0 ? ' om-negative' : '';
     let html = '<div class="om-val' + negCls + '">' + fmtVal + '</div>';
     if (revenue && Math.abs(revenue) > 0.01) {
-      const pct = (Math.abs(val) / Math.abs(revenue) * 100).toFixed(1);
-      const pctCls = isTotalCol ? 'om-pct-total' : 'om-pct';
-      html += '<div class="' + pctCls + '">(' + pct + '%)</div>';
+      const pct = (val / Math.abs(revenue) * 100).toFixed(1);
+      html += '<div class="om-pct">(' + pct + '%)</div>';
     }
     return html;
   }
