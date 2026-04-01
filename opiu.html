@@ -140,7 +140,7 @@
     const OPIU_ROW_CONFIG = {
       l0: new Set(['Выручка']),
       l1: {
-        'Производственные расходы': { colorType: 'expense' },
+        'Производственные расходы': { colorType: 'expense', companyWide: true },
         'Косвенные расходы':        { colorType: 'expense', companyWide: true }
       },
       l2: {
@@ -153,6 +153,10 @@
       calc: new Set([
         'Маржинальный доход',
         'Валовая прибыль по направлениям',
+        'Валовая прибыль',
+        'Операционная прибыль (EBITDA)'
+      ]),
+      calcCW: new Set([
         'Валовая прибыль',
         'Операционная прибыль (EBITDA)'
       ])
@@ -222,7 +226,7 @@
     if (type === 'l2')      return OPIU_ROW_CONFIG.l2[label]?.companyWide === true;
     if (type === 'l1')      return OPIU_ROW_CONFIG.l1[label]?.companyWide === true;
     if (type === 'article') return currentL2 ? (OPIU_ROW_CONFIG.l2[currentL2]?.companyWide === true) : false;
-    if (type === 'calc')    return false; // для calc используем row.merged
+    if (type === 'calc')    return OPIU_ROW_CONFIG.calcCW.has(label);
     return false;
   }
 
@@ -249,7 +253,7 @@
     const totalVal = values ? values['Итого'] : null;
 
     // company-wide: для calc используем row.merged, для остальных — isCompanyWide()
-    const cw = (type === 'calc') ? !!row.merged : isCompanyWide(type, label, currentL2);
+    const cw = isCompanyWide(type, label, currentL2);
 
     // CSS класс строки
     const rowCls = {
