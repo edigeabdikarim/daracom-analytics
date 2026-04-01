@@ -95,7 +95,6 @@
 
     /* Value + pct */
     .om-val { font-weight: 600; }
-    .om-val.om-positive { color: inherit; }
     .om-val.om-negative { color: #DC2626; }
     .om-pct { font-size: 10px; color: #9CA3AF; margin-top: 1px; }
     .om-pct-total { font-size: 10px; color: #6EE7B7; margin-top: 1px; }
@@ -259,14 +258,11 @@
       article: 'om-article-row' + (artIdx % 2 === 1 ? ' om-alt' : '')
     }[type] || 'om-article-row';
 
-    // Отступ для статей
-    const indent = type === 'article' ? ' style="padding-left:28px"' : '';
-
     // Итого-ячейка
     const totalCell = '<td class="om-td-total">' + buildOpiuCell(totalVal, totalRevenue, true) + '</td>';
 
     let tr = '<tr class="' + rowCls + '">';
-    tr += '<td' + indent + '>' + escHtml(label) + '</td>';
+    tr += '<td>' + escHtml(label) + '</td>';
     tr += totalCell;
 
     if (cw) {
@@ -313,6 +309,8 @@
   function renderOpiuMatrix(data) {
     var stores = data.stores;
     var rows   = data.rows;
+
+    if (!stores || !rows) return '<p style="padding:24px;color:#9CA3AF;text-align:center">Нет данных</p>';
 
     // Индекс строк по лейблу для быстрого доступа
     var rowByLabel = {};
