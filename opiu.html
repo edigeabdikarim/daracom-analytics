@@ -210,6 +210,39 @@
   </main>
 
   <script>
+  // ─── КЛАССИФИКАЦИЯ ─────────────────────────────
+  function classifyRow(label) {
+    if (OPIU_ROW_CONFIG.l0.has(label))   return 'l0';
+    if (OPIU_ROW_CONFIG.l1[label])       return 'l1';
+    if (OPIU_ROW_CONFIG.l2[label])       return 'l2';
+    if (OPIU_ROW_CONFIG.calc.has(label)) return 'calc';
+    return 'article';
+  }
+
+  function isCompanyWide(type, label, currentL2) {
+    if (type === 'l2')      return OPIU_ROW_CONFIG.l2[label]?.companyWide === true;
+    if (type === 'l1')      return OPIU_ROW_CONFIG.l1[label]?.companyWide === true;
+    if (type === 'article') return currentL2 ? (OPIU_ROW_CONFIG.l2[currentL2]?.companyWide === true) : false;
+    if (type === 'calc')    return false; // для calc используем row.merged
+    return false;
+  }
+
+  // ─── ЯЧЕЙКА ────────────────────────────────────
+  function buildOpiuCell(val, revenue, isTotalCol) {
+    if (val === null || val === undefined || val === 0) {
+      return '<span class="om-zero">—</span>';
+    }
+    const fmtVal = fmtShort(val);
+    const negCls = val < 0 ? ' om-negative' : '';
+    let html = '<div class="om-val' + negCls + '">' + fmtVal + '</div>';
+    if (revenue && Math.abs(revenue) > 0.01) {
+      const pct = (Math.abs(val) / Math.abs(revenue) * 100).toFixed(1);
+      const pctCls = isTotalCol ? 'om-pct-total' : 'om-pct';
+      html += '<div class="' + pctCls + '">(' + pct + '%)</div>';
+    }
+    return html;
+  }
+
   // ─── STATE ─────────────────────────────────────
   let currentMonth = new Date().getMonth() + 1;
   let currentData = null;
