@@ -134,17 +134,30 @@
       GAS_URL: 'https://script.google.com/macros/s/AKfycbyukzkRocAiDyYN2CVQcuVi2FXDUOOjL4qofWMnoK3PaiEpaqF3ojpE2u0JsKEYFwYprA/exec',
       CACHE_TTL_MS: 30 * 60 * 1000,
     };
+    const CACHE_YEAR = new Date().getFullYear();
     const MONTH_NAMES = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
                           'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-    const GROUP_BG = {
-      'Выручка': 'bg-income',
-      'Переменные': 'bg-expense',
-      'Маржинальный доход': 'bg-income',
-      'Прямые постоянные': 'bg-expense',
-      'Валовая прибыль по направлениям': 'bg-income',
+
+    const OPIU_ROW_CONFIG = {
+      l0: new Set(['Выручка']),
+      l1: {
+        'Производственные расходы': { colorType: 'expense' },
+        'Косвенные расходы':        { colorType: 'expense', companyWide: true }
+      },
+      l2: {
+        'Переменные':           { companyWide: false, l1: 'Производственные расходы' },
+        'Прямые постоянные':    { companyWide: false, l1: 'Производственные расходы' },
+        'Общепроизводственные': { companyWide: true,  l1: 'Производственные расходы' },
+        'Административные':     { companyWide: true,  l1: 'Косвенные расходы' },
+        'Коммерческие':         { companyWide: true,  l1: 'Косвенные расходы' },
+      },
+      calc: new Set([
+        'Маржинальный доход',
+        'Валовая прибыль по направлениям',
+        'Валовая прибыль',
+        'Операционная прибыль (EBITDA)'
+      ])
     };
-    // Строки выручки — не показываем % (сами являются базой)
-    const NO_PCT_LABELS = new Set(['Выручка']);
   </script>
 
   <!-- ═══ HEADER ═══ -->
