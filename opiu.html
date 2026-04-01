@@ -286,6 +286,82 @@
     return tr;
   }
 
+  // ─── L1 ИТОГО ──────────────────────────────────
+  // Вычисляет Итого для L1-группы как сумму её L2-подгрупп.
+  // Возвращает объект values { 'Итого': N, 'Магазин Астана': N, ... }
+  function computeL1Total(l1Label, rowByLabel, stores) {
+    // Находим все L2, принадлежащие этому L1
+    var l2Names = Object.keys(OPIU_ROW_CONFIG.l2).filter(function(k) {
+      return OPIU_ROW_CONFIG.l2[k].l1 === l1Label;
+    });
+    var values = { 'Итого': 0 };
+    stores.forEach(function(s) { values[s] = 0; });
+
+    l2Names.forEach(function(l2name) {
+      var l2row = rowByLabel[l2name];
+      if (!l2row || !l2row.values) return;
+      values['Итого'] += l2row.values['Итого'] || 0;
+      // Per-direction L2 вносят вклад в per-direction L1
+      if (!OPIU_ROW_CONFIG.l2[l2name].companyWide) {
+        stores.forEach(function(s) { values[s] += l2row.values[s] || 0; });
+      }
+    });
+    return values;
+  }
+
+  // ─── РЕНДЕР МАТРИЦЫ ────────────────────────────
+  function renderOpiuMatrix(data) {
+    var stores = data.stores;
+    var rows   = data.rows;
+
+    // Индекс строк по лейблу для быстрого доступа
+    var rowByLabel = {};
+    rows.forEach(function(r) { rowByLabel[r.label] = r; });
+
+    // База для % — строка Выручка
+    var revRow       = rowByLabel['Выручка'];
+    var totalRevenue = revRow ? (revRow.values['Итого'] || 0) : 0;
+    var storeRevenue = {};
+    stores.forEach(function(s) {
+      storeRevenue[s] = revRow ? (revRow.values[s] || 0) : 0;
+    });
+
+    // Thead
+    var html = '<table class="om-table"><thead><tr>';
+    html += '<th class="om-th-metric">Метрика</th>';
+    html += '<th class="om-th-total" style="text-align:right">Итого</th>';
+    stores.forEach(function(s) {
+      html += '<th style="text-align:right">' + escHtml(s.replace('Магазин ', '')) + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    // Контекст итерации
+    var currentL2  = null;
+    var artIdx     = 0;  // счётчик для чередования строк в текущей L2-группе
+
+    rows.forEach(function(row) {
+      var label = row.label;
+      var type  = classifyRow(label);
+
+      // Обновляем контекст
+      if (type === 'l2')      { currentL2 = label; artIdx = 0; }
+      if (type === 'l0' || type === 'l1' || type === 'calc') { artIdx = 0; }
+      if (type === 'article') { artIdx++; }
+
+      // Для L1-групп: если в GAS нет значений — вычисляем
+      var rowToRender = row;
+      if (type === 'l1' && (!row.values || row.values['Итого'] === 0)) {
+        var computed = computeL1Total(label, rowByLabel, stores);
+        rowToRender = Object.assign({}, row, { values: computed });
+      }
+
+      html += renderOpiuRow(rowToRender, type, stores, totalRevenue, storeRevenue, currentL2, artIdx);
+    });
+
+    html += '</tbody></table>';
+    return html;
+  }
+
   // ─── STATE ─────────────────────────────────────
   let currentMonth = new Date().getMonth() + 1;
   let currentData = null;
