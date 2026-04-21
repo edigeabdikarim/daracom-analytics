@@ -561,6 +561,45 @@ const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','
   loadData();
 })();
 
+// ─── SAFE LOCALSTORAGE ────────────────────────────────
+// Оборачивает setItem: при QuotaExceededError чистит старые dds_cache_month_*
+// (все, кроме текущего месяца) и повторяет попытку. При повторном провале
+// молча сдаётся — кэш не критичен, данные всегда можно дотянуть с GAS.
+function safeSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    try {
+      const keep = 'dds_cache_month_' + currentMonth;
+      const toRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('dds_cache_month_') === 0 && k !== keep && k !== key) {
+          toRemove.push(k);
+        }
+      }
+      toRemove.forEach(k => localStorage.removeItem(k));
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e2) {
+      try {
+        // Крайняя мера — чистим вообще все dds_* ключи
+        const toRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.indexOf('dds_') === 0 && k !== key) toRemove.push(k);
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
+        localStorage.setItem(key, value);
+        return true;
+      } catch (e3) {
+        return false;
+      }
+    }
+  }
+}
+
 // ─── BALANCE SUMMARY ──────────────────────────────────
 function loadBalanceSummary() {
   const cacheKey = 'dds_balance_cache';
@@ -582,7 +621,7 @@ function loadBalanceSummary() {
     .then(resp => {
       if (!resp.ok) return;
       monthlyBalance = resp.data;
-      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: resp.data, ver: BALANCE_VERSION }));
+      safeSetItem(cacheKey, JSON.stringify({ ts: Date.now(), data: resp.data, ver: BALANCE_VERSION }));
       // Если контент уже отображён — перерисовать KPI с остатками
       if (document.getElementById('stateContent').style.display !== 'none' &&
           !document.getElementById('stateContent').classList.contains('hidden')) {
@@ -635,7 +674,7 @@ function loadData() {
     .then(r => r.json())
     .then(resp => {
       if (!resp.ok) throw new Error(resp.error || 'GAS вернул ошибку');
-      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: resp.data }));
+      safeSetItem(cacheKey, JSON.stringify({ ts: Date.now(), data: resp.data }));
       onDataLoaded(resp.data);
     })
     .catch(err => {
@@ -1431,7 +1470,7 @@ function ensureMonthLoaded(m) {
         if (!resp.ok) throw new Error();
         allMonthsData[month] = resp.data.rows || [];
         allMonthsLoaded[month] = 'done';
-        localStorage.setItem('dds_cache_month_' + month, JSON.stringify({ ts: Date.now(), data: resp.data }));
+        safeSetItem('dds_cache_month_' + month, JSON.stringify({ ts: Date.now(), data: resp.data }));
         _refreshAfterMonthLoad();
       })
       .catch(() => { allMonthsLoaded[month] = 'error'; });
