@@ -261,11 +261,39 @@
       .summary-tbl th:first-child, .summary-tbl th:last-child { border-color: #1E3A5F; }
       .sg-income td, .sg-expense td, .sg-neutral td { border-top-color: #1E3A5F !important; border-bottom-color: #1E3A5F !important; }
       .sma-last td { border-bottom-color: #1E3A5F !important; }
+      /* sprint print */
+      #section-summary-print.active #sprintPrintHeader { display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .sprint-tbl thead { display: table-header-group; }
+      .sprint-tbl th, .sprint-tbl td { position: static !important; }
+      .sprint-tbl th, .sprint-tbl td, .sprint-expense td, .sprint-income td, .sprint-article td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      tbody.sprint-expense-body { break-inside: avoid; page-break-inside: avoid; }
+      body.sprint-compact .sprint-expense-body .sprint-article { display: none !important; }
       /* По магазинам — печать */
       #storeGrid .store-card { page-break-inside: avoid; break-inside: avoid; color: #111 !important; }
       #storeGrid .store-name { color: #111 !important; }
       #storeGrid { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
+
+    /* ── Сводная (печать) — sprint-tbl ── */
+    .sprint-tbl { width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #111; }
+    .sprint-tbl th { background: #fff; color: #111; padding: 6px 8px; text-align: right; font-weight: 700; white-space: nowrap; border: 1px solid #111; }
+    .sprint-tbl th:first-child { text-align: left; min-width: 180px; }
+    .sprint-tbl td { padding: 5px 8px; text-align: right; white-space: nowrap; border: 1px solid #D1D5DB; background: #fff; color: #111; }
+    .sprint-tbl td:first-child { text-align: left; }
+    .sprint-income td { font-weight: 700; border-top: 2px solid #111 !important; border-bottom: 2px solid #111 !important; }
+    .sprint-expense td { font-weight: 700; background: #F3F4F6 !important; border-top: 2px solid #111 !important; }
+    .sprint-article td { background: #fff; }
+    .sprint-pct { color: #555; font-size: 10px; }
+    .sprint-zero { color: #999; }
+    .sprint-totals-bar { display: flex; border: 1px solid #111; border-radius: 6px; overflow: hidden; margin-bottom: 14px; }
+    .sprint-total-cell { flex: 1; padding: 9px 14px; text-align: center; border-right: 1px solid #111; }
+    .sprint-total-cell:last-child { border-right: none; }
+    .sprint-total-label { font-size: 10px; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+    .sprint-total-value { font-size: 14px; font-weight: 700; color: #111; }
+    .sprint-mode-note { display: none; font-size: 11px; color: #555; font-style: italic; padding: 4px 0 10px; }
+    body.sprint-compact .sprint-mode-note { display: block; }
+    body.sprint-compact .sprint-income-body .sprint-article { display: table-row; } /* поступления всегда раскрыты */
+    body.sprint-compact .sprint-expense-body .sprint-article { display: none; }
 
     /* ── ДДС Гульжан А. — цветовая маркировка статей ── */
     .gul-advance    { background: #FEF3C7 !important; color: #92400E !important; }
