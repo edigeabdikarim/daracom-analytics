@@ -1947,6 +1947,106 @@ function renderSummaryMatrix() {
   wrap.innerHTML = html;
 }
 
+// ── Сводная (печать) ─────────────────────────────────
+
+function renderSprintCell(value) {
+  if (Math.abs(value) < 0.01) return `<span class="sprint-zero">—</span>`;
+  const formatted = new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(Math.abs(value)) + ' ₸';
+  const sign = value < 0 ? '−' : '+';
+  return `${sign}${formatted}`;
+}
+
+function renderSprintPct(value, totalIncome) {
+  if (!totalIncome || Math.abs(value) < 0.01) return `<span class="sprint-zero">—</span>`;
+  const pct = (Math.abs(value) / totalIncome * 100).toFixed(1);
+  return `<span class="sprint-pct">${pct}%</span>`;
+}
+
+function renderSummaryPrint() {
+  const wrap = document.getElementById('sprintWrap');
+  if (!wrap) return;
+  if (document.getElementById('stateContent').classList.contains('hidden')) return;
+  if (!allRows || allRows.length === 0) {
+    wrap.innerHTML = `<p style="padding:24px;color:#9CA3AF;text-align:center;">Нет данных за ${escHtml(MONTH_NAMES[currentMonth - 1])}</p>`;
+    return;
+  }
+
+  const { stores, groups, totalIncome } = buildSummaryData(allRows);
+  if (stores.length === 0) {
+    wrap.innerHTML = `<p style="padding:24px;color:#9CA3AF;text-align:center;">Нет данных по магазинам за ${escHtml(MONTH_NAMES[currentMonth - 1])}</p>`;
+    return;
+  }
+
+  // Обновляем print-шапку
+  const monthLabel = MONTH_NAMES[currentMonth - 1] + ' 2026';
+  document.querySelectorAll('.sprint-ph-month').forEach(el => { el.textContent = monthLabel; });
+
+  // Считаем CF (операционный, без тех. операций)
+  const { incoming, outgoing, netCF } = calcKPI(allRows);
+  const fmtFull = n => new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(Math.abs(n)) + ' ₸';
+
+  document.querySelectorAll('.sprint-ph-cf').forEach(el => {
+    el.textContent = (netCF >= 0 ? '+' : '−') + fmtFull(netCF);
+  });
+
+  // Блок итогов
+  const tb = document.getElementById('sprintTotalsBar');
+  if (tb) tb.style.display = 'flex';
+  const elIn  = document.getElementById('sprintTotalIncoming');
+  const elOut = document.getElementById('sprintTotalOutgoing');
+  const elNet = document.getElementById('sprintTotalNet');
+  if (elIn)  elIn.textContent  = '+' + fmtFull(incoming);
+  if (elOut) elOut.textContent = '−' + fmtFull(outgoing);
+  if (elNet) elNet.textContent = (netCF >= 0 ? '+' : '−') + fmtFull(netCF);
+
+  // Строим таблицу
+  let html = `<table class="sprint-tbl"><thead><tr>`;
+  html += `<th>Статья</th><th>Итого</th><th class="sprint-pct">% выр.</th>`;
+  stores.forEach(s => { html += `<th>${escHtml(summaryStoreName(s))}</th>`; });
+  html += `</tr></thead>`;
+
+  groups.forEach(g => {
+    const isIncome  = g.isIncome === true;
+    const isExpense = g.isIncome === false;
+    const tbodyClass = isIncome ? 'sprint-income-body' : (isExpense ? 'sprint-expense-body' : 'sprint-neutral-body');
+    const tbodyStyle = isExpense ? ' style="break-inside:avoid;page-break-inside:avoid"' : '';
+    html += `<tbody class="${tbodyClass}"${tbodyStyle}>`;
+
+    // Строка заголовка группы
+    const groupRowCls = isIncome ? 'sprint-income' : (isExpense ? 'sprint-expense' : 'sprint-neutral');
+    html += `<tr class="${groupRowCls}">`;
+    html += `<td>${escHtml(g.name)}</td>`;
+    html += `<td>${renderSprintCell(g.subtotalTotal)}</td>`;
+    html += `<td>${renderSprintPct(g.subtotalTotal, totalIncome)}</td>`;
+    stores.forEach(s => { html += `<td>${renderSprintCell(g.subtotals[s] || 0)}</td>`; });
+    html += `</tr>`;
+
+    // Строки статей
+    g.articles.forEach(a => {
+      html += `<tr class="sprint-article">`;
+      html += `<td style="padding-left:18px">${escHtml(a.name)}</td>`;
+      html += `<td>${renderSprintCell(a.total)}</td>`;
+      html += `<td>${renderSprintPct(a.total, totalIncome)}</td>`;
+      if (a.isCompanyWide) {
+        html += `<td colspan="${stores.length}" style="text-align:center">${renderSprintCell(a.total)}</td>`;
+      } else {
+        stores.forEach(s => { html += `<td>${renderSprintCell(a.byStore[s] || 0)}</td>`; });
+      }
+      html += `</tr>`;
+    });
+
+    html += `</tbody>`;
+  });
+
+  html += `</table>`;
+  wrap.innerHTML = html;
+}
+
+function toggleSprintCompact() {
+  const checked = document.getElementById('sprintCompactToggle').checked;
+  document.body.classList.toggle('sprint-compact', checked);
+}
+
 function toggleSummaryZeros() {
   const hide = document.getElementById('summaryHideZeros').checked;
   // Скрыть/показать нулевые строки статей
