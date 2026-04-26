@@ -826,6 +826,7 @@ function renderAll() {
   renderExpensesSection();
   renderStoreGrid();
   renderSummaryMatrix();
+  renderSummaryPrint();
   renderGulzhanMatrix();
 }
 
@@ -2623,6 +2624,9 @@ function setSection(name) {
   if (name === 'gulzhan' && !document.getElementById('stateContent').classList.contains('hidden')) {
     renderGulzhanMatrix();
   }
+  if (name === 'summary-print' && !document.getElementById('stateContent').classList.contains('hidden')) {
+    renderSummaryPrint();
+  }
 }
 
 // ─── UI STATES ────────────────────────────────────────
@@ -2691,9 +2695,10 @@ function summaryStoreName(s) {
 
 // ── Динамический @top-right при печати ──
 const SECTION_PRINT_TITLES = {
-  'section-summary': 'Сводная по статьям',
-  'section-gulzhan': 'Гульжан А.',
-  'section-stores':  'Магазины Гульжан А.',
+  'section-summary':       'Сводная по статьям',
+  'section-summary-print': 'Сводная (печать)',
+  'section-gulzhan':       'Гульжан А.',
+  'section-stores':        'Магазины Гульжан А.',
 };
 let _printStyleEl = null;
 window.addEventListener('beforeprint', () => {
