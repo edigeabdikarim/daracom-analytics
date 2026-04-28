@@ -815,20 +815,14 @@ function archiveKeyForEndOfMonth(month, year) {
   return year + '-' + String(month).padStart(2, '0');
 }
 
-// Полный наличный остаток на начало month — берётся как
-//   (Денег на начало месяца) − (сумма всех безналичных кошельков «б/н»)
-// «Денег на начало месяца» в «ДДС: Сводный» равно сумме ВСЕХ кошельков
-// (включая личные/валютные — Рауан, Гульжан, €, $ и т.п.), поэтому
-// вычитанием безнала получаем все наличные сразу, без ведения списка.
+// Наличный остаток на начало month — сумма 7 ИП-магазинных кошельков
+// (CASH_WALLETS), идентично тому, что показывает правая матрица «💵 Наличные».
+// Личные/валютные кошельки (Рауан, Гульжан, $, €) сюда сознательно не входят —
+// они в листе есть, но не относятся к операционным средствам по магазинам.
 function cashTotalForMonth(month) {
-  if (!monthlyBalance || !monthlyBalance[month]) return null;
-  const m = monthlyBalance[month];
-  if (typeof m.balance !== 'number' || !m.wallets) return null;
-  let noncashFromDDS = 0;
-  Object.keys(m.wallets).forEach(function(k) {
-    if (/б\/н/.test(k)) noncashFromDDS += (m.wallets[k] || 0);
-  });
-  return m.balance - noncashFromDDS;
+  if (!monthlyBalance || !monthlyBalance[month] || !monthlyBalance[month].wallets) return null;
+  const w = monthlyBalance[month].wallets;
+  return CASH_WALLETS.reduce(function(s, e) { return s + (w[e.key] || 0); }, 0);
 }
 
 function noncashEntryAtEndOfMonth(month, year) {
@@ -847,8 +841,13 @@ function calcBalance(month) {
   const isCurrentMonth = month >= now;
 
   // ── Наличные ──
+  // Для текущего/будущего месяца «конец месяца» ≡ «сейчас» — то же значение,
+  // что показывает правая матрица. Только для прошлых закрытых месяцев
+  // берём снимок начала следующего месяца (= конец текущего).
   const cashStart = cashTotalForMonth(month);
-  const cashEnd   = (cashTotalForMonth(month + 1) !== null) ? cashTotalForMonth(month + 1) : cashStart;
+  const cashEnd = isCurrentMonth
+    ? cashStart
+    : ((cashTotalForMonth(month + 1) !== null) ? cashTotalForMonth(month + 1) : cashStart);
 
   // ── Безналичные: начало = конец предыдущего месяца ──
   let prevMonth = month - 1, prevYear = DASHBOARD_YEAR;
