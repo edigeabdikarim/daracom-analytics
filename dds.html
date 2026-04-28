@@ -645,6 +645,7 @@ let filteredRows = [];
 let currentMonth = new Date().getMonth() + 1;
 let monthlyBalance = null; // { "1": { incoming, outgoing }, ... } — данные по всем месяцам
 let noncashBalances = null; // актуальные остатки по безналу (направление × банк)
+let noncashArchive = null;  // { byMonth: { "2026-01": N, ... } } — суммы безнала на конец месяца
 let allMonthsData = {};    // { month: rows[] } — сырые строки по каждому месяцу
 let allMonthsLoaded = {};  // { month: 'loading'|'done'|'error' }
 let expensesTab = 'list';  // 'list' | 'table'
@@ -662,6 +663,7 @@ const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','
   });
   loadBalanceSummary();
   loadNoncashBalances();
+  loadNoncashArchive();
   loadData();
 })();
 
@@ -736,6 +738,37 @@ function loadBalanceSummary() {
     .catch(() => { /* баланс не критичен */ });
 }
 
+// ─── NONCASH ARCHIVE (исторические остатки на конец месяца) ──
+const NONCASH_ARCHIVE_CACHE_KEY = 'dds_noncash_archive_cache';
+const NONCASH_ARCHIVE_CACHE_VER = 'v1';
+const NONCASH_ARCHIVE_TTL_MS = 30 * 60 * 1000; // 30 минут
+
+function loadNoncashArchive() {
+  try {
+    const cached = localStorage.getItem(NONCASH_ARCHIVE_CACHE_KEY);
+    if (cached) {
+      const { ts, data, ver } = JSON.parse(cached);
+      if (ver === NONCASH_ARCHIVE_CACHE_VER && Date.now() - ts < NONCASH_ARCHIVE_TTL_MS) {
+        noncashArchive = data;
+        return;
+      }
+    }
+  } catch(e) { /* ignore */ }
+
+  fetch(DDS_GAS_URL + '?action=noncash_archive')
+    .then(r => r.json())
+    .then(resp => {
+      if (!resp.ok) return;
+      noncashArchive = resp.data;
+      safeSetItem(NONCASH_ARCHIVE_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: resp.data, ver: NONCASH_ARCHIVE_CACHE_VER }));
+      if (document.getElementById('stateContent').style.display !== 'none' &&
+          !document.getElementById('stateContent').classList.contains('hidden')) {
+        renderKPI();
+      }
+    })
+    .catch(() => { /* архив не критичен — KPI покажет «—» */ });
+}
+
 // ─── NONCASH BALANCES (live, отдельный источник) ─────
 const NONCASH_CACHE_KEY = 'dds_noncash_balance_cache';
 const NONCASH_CACHE_VER = 'v1';
@@ -762,19 +795,66 @@ function loadNoncashBalances() {
       if (document.getElementById('stateContent').style.display !== 'none' &&
           !document.getElementById('stateContent').classList.contains('hidden')) {
         renderWallets();
+        renderKPI(); // live-итог влияет на «Остаток на конец месяца» для текущего месяца
       }
     })
     .catch(() => { /* блок остатков не критичен */ });
 }
 
-// Вычисляет остаток на начало и конец указанного месяца
-// Данные берутся напрямую из «ДДС: Сводный» (строка «Денег на начало месяца»)
+// Вычисляет остаток на начало и конец указанного месяца.
+// Логика гибридная:
+//   • наличные — суммируются из «ДДС: Сводный» (monthlyBalance[N].wallets, ключи CASH_WALLETS)
+//   • безналичные — из архива (noncashArchive.byMonth) по ключу YYYY-MM «конца месяца»;
+//     для текущего/будущего месяца на конец берём live (noncashBalances.grandTotal)
+// Возвращает { balanceStart, balanceEnd } — поля могут быть null, если данных нет.
+const DASHBOARD_YEAR = 2026;
+
+function archiveKeyForEndOfMonth(month, year) {
+  // ключ в архиве — YYYY-MM, где (year, month) — это «месяц, на конец которого записан остаток»
+  // например, конец декабря 2025 = "2025-12"
+  return year + '-' + String(month).padStart(2, '0');
+}
+
+function cashTotalForMonth(month) {
+  if (!monthlyBalance || !monthlyBalance[month] || !monthlyBalance[month].wallets) return null;
+  const w = monthlyBalance[month].wallets;
+  return CASH_WALLETS.reduce(function(s, e) { return s + (w[e.key] || 0); }, 0);
+}
+
+function noncashTotalAtEndOfMonth(month, year) {
+  if (!noncashArchive || !noncashArchive.byMonth) return null;
+  const v = noncashArchive.byMonth[archiveKeyForEndOfMonth(month, year)];
+  return (typeof v === 'number') ? v : null;
+}
+
 function calcBalance(month) {
-  const mb = monthlyBalance && monthlyBalance[month];
-  const balanceStart = mb ? mb.balance : 0;
-  const next = monthlyBalance && monthlyBalance[month + 1];
-  const balanceEnd = next ? next.balance : balanceStart;
-  return { balanceStart, balanceEnd };
+  const now = new Date().getMonth() + 1;
+  const isCurrentMonth = month >= now;
+
+  // ── Наличные ──
+  const cashStart = cashTotalForMonth(month);
+  const cashEnd   = (cashTotalForMonth(month + 1) !== null) ? cashTotalForMonth(month + 1) : cashStart;
+
+  // ── Безналичные: начало = конец предыдущего месяца ──
+  let prevMonth = month - 1, prevYear = DASHBOARD_YEAR;
+  if (prevMonth === 0) { prevMonth = 12; prevYear = DASHBOARD_YEAR - 1; }
+  const noncashStart = noncashTotalAtEndOfMonth(prevMonth, prevYear);
+
+  // ── Безналичные: конец ──
+  let noncashEnd;
+  if (isCurrentMonth) {
+    // для текущего месяца архива ещё нет → берём live-остаток
+    noncashEnd = (noncashBalances && typeof noncashBalances.grandTotal === 'number')
+      ? noncashBalances.grandTotal
+      : null;
+  } else {
+    noncashEnd = noncashTotalAtEndOfMonth(month, DASHBOARD_YEAR);
+  }
+
+  const balanceStart = (cashStart !== null && noncashStart !== null) ? cashStart + noncashStart : null;
+  const balanceEnd   = (cashEnd   !== null && noncashEnd   !== null) ? cashEnd   + noncashEnd   : null;
+
+  return { balanceStart, balanceEnd, cashStart, cashEnd, noncashStart, noncashEnd };
 }
 
 // ─── REFRESH (force-clear cache) ──────────────────────
@@ -782,11 +862,14 @@ function refreshData() {
   localStorage.removeItem('dds_cache_month_' + currentMonth);
   localStorage.removeItem('dds_balance_cache');
   localStorage.removeItem(NONCASH_CACHE_KEY);
+  localStorage.removeItem(NONCASH_ARCHIVE_CACHE_KEY);
   delete allMonthsLoaded[currentMonth];
   monthlyBalance = null;
   noncashBalances = null;
+  noncashArchive = null;
   loadBalanceSummary();
   loadNoncashBalances();
+  loadNoncashArchive();
   loadData();
 }
 
@@ -932,14 +1015,21 @@ function renderKPI() {
     ? ' <span style="color:#F59E0B;cursor:help" title="Фильтры не влияют на остатки — они всегда считаются по всей компании">⚠</span>'
     : '';
 
-  // Остатки — если данные по всем месяцам ещё не загружены, показываем прочерк
-  const bal = monthlyBalance ? calcBalance(currentMonth) : null;
-  let balanceStartHtml = bal
-    ? `<div class="kpi-value kpi-val-balance">${fmt(bal.balanceStart)}</div>`
-    : `<div class="kpi-value" style="color:#9CA3AF;font-size:16px">Загрузка…</div>`;
-  let balanceEndHtml = bal
-    ? `<div class="kpi-value kpi-val-balance ${bal.balanceEnd >= 0 ? '' : 'bal-neg'}">${fmt(bal.balanceEnd)}</div>`
-    : `<div class="kpi-value" style="color:#9CA3AF;font-size:16px">Загрузка…</div>`;
+  // Остатки — гибрид: наличные из «ДДС: Сводный», безнал — архив (или live для текущего месяца).
+  // Если хоть один источник ещё грузится / данных за месяц нет — показываем заглушку.
+  const bal = (monthlyBalance && (noncashArchive || noncashBalances)) ? calcBalance(currentMonth) : null;
+  const isLoading = !(monthlyBalance && noncashArchive && noncashBalances);
+  function balCellHtml(val, allowNegStyle) {
+    if (val === null || val === undefined) {
+      return isLoading
+        ? `<div class="kpi-value" style="color:#9CA3AF;font-size:16px">Загрузка…</div>`
+        : `<div class="kpi-value" style="color:#9CA3AF;font-size:18px" title="Нет данных в архиве за этот месяц">—</div>`;
+    }
+    const cls = (allowNegStyle && val < 0) ? 'kpi-val-balance bal-neg' : 'kpi-val-balance';
+    return `<div class="kpi-value ${cls}">${fmt(val)}</div>`;
+  }
+  const balanceStartHtml = balCellHtml(bal ? bal.balanceStart : null, false);
+  const balanceEndHtml   = balCellHtml(bal ? bal.balanceEnd   : null, true);
 
   document.getElementById('kpiGrid').innerHTML = `
     <div class="kpi-card" style="border-left:3px solid #8B5CF6;cursor:default" onmouseenter="showKPITooltip(event,'balstart')" onmouseleave="hideTooltip()">

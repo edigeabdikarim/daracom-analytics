@@ -277,3 +277,80 @@ function doGetNoncashBalances() {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+/**
+ * Парсит ячейку с датой в архиве: либо Date object из Google Sheets,
+ * либо строка "dd.mm.yyyy". Возвращает ключ "yyyy-mm" (год-месяц
+ * последнего дня = "конец месяца X" = "начало месяца X+1") или null.
+ */
+function parseEndOfMonthKey(v) {
+  if (v instanceof Date) {
+    const y = v.getFullYear();
+    const m = String(v.getMonth() + 1).padStart(2, '0');
+    return y + '-' + m;
+  }
+  const s = String(v || '').trim();
+  if (!s) return null;
+  const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (!m) return null;
+  return m[3] + '-' + m[2].padStart(2, '0');
+}
+
+/**
+ * Читает лист «Остатки по безналу (архив)» и собирает суммарный остаток
+ * безнала на конец каждого закрытого месяца.
+ *
+ * Возвращает:
+ *   {
+ *     byMonth: {
+ *       "2025-12": 12345678.9,   // конец декабря 2025 = начало января 2026
+ *       "2026-01": 22000000.0,
+ *       ...
+ *     },
+ *     updatedAt: "..."
+ *   }
+ *
+ * Незаполненные ячейки игнорируются (просто не суммируются).
+ */
+function getNoncashArchive() {
+  const ss = SpreadsheetApp.openById(NONCASH_BALANCE_SHEET_ID);
+  const sheet = ss.getSheetByName('Остатки по безналу (архив)');
+  if (!sheet) throw new Error('Лист "Остатки по безналу (архив)" не найден');
+
+  const data = sheet.getDataRange().getValues();
+  const byMonth = {};
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const key = parseEndOfMonthKey(row[0]);
+    if (!key) continue;
+    const direction = String(row[1] || '').trim();
+    const bank = String(row[2] || '').trim();
+    if (NONCASH_DIRECTIONS.indexOf(direction) === -1) continue;
+    if (NONCASH_BANKS.indexOf(bank) === -1) continue;
+    const v = parseTengeStr(row[3]);
+    if (v === 0) continue; // пустые/нулевые ячейки игнорируем
+    byMonth[key] = (byMonth[key] || 0) + v;
+  }
+
+  return {
+    byMonth: byMonth,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Endpoint: ?action=noncash_archive
+ */
+function doGetNoncashArchive() {
+  try {
+    const data = getNoncashArchive();
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true, data: data }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}

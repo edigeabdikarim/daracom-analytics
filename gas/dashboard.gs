@@ -51,6 +51,10 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'noncash_balances') {
     return doGetNoncashBalances();
   }
+  // Роутинг: ?action=noncash_archive → исторические остатки по безналу (по концу месяца)
+  if (e && e.parameter && e.parameter.action === 'noncash_archive') {
+    return doGetNoncashArchive();
+  }
   if (e && e.parameter && e.parameter.action === 'opiu') {
     return doGetOPiU(e);
   }
