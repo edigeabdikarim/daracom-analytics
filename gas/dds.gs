@@ -297,20 +297,22 @@ function parseEndOfMonthKey(v) {
 }
 
 /**
- * Читает лист «Остатки по безналу (архив)» и собирает суммарный остаток
- * безнала на конец каждого закрытого месяца.
+ * Читает лист «Остатки по безналу (архив)» и собирает остатки безнала
+ * на конец каждого закрытого месяца с разбивкой по направлениям.
  *
  * Возвращает:
  *   {
  *     byMonth: {
- *       "2025-12": 12345678.9,   // конец декабря 2025 = начало января 2026
- *       "2026-01": 22000000.0,
+ *       "2025-12": {
+ *         total: 12345678.9,
+ *         byDirection: { "Абайка": N, "Восход": N, ... }
+ *       },
  *       ...
  *     },
  *     updatedAt: "..."
  *   }
  *
- * Незаполненные ячейки игнорируются (просто не суммируются).
+ * Незаполненные/нулевые ячейки игнорируются.
  */
 function getNoncashArchive() {
   const ss = SpreadsheetApp.openById(NONCASH_BALANCE_SHEET_ID);
@@ -329,8 +331,14 @@ function getNoncashArchive() {
     if (NONCASH_DIRECTIONS.indexOf(direction) === -1) continue;
     if (NONCASH_BANKS.indexOf(bank) === -1) continue;
     const v = parseTengeStr(row[3]);
-    if (v === 0) continue; // пустые/нулевые ячейки игнорируем
-    byMonth[key] = (byMonth[key] || 0) + v;
+    if (v === 0) continue;
+
+    if (!byMonth[key]) {
+      byMonth[key] = { total: 0, byDirection: {} };
+      NONCASH_DIRECTIONS.forEach(function(d) { byMonth[key].byDirection[d] = 0; });
+    }
+    byMonth[key].byDirection[direction] += v;
+    byMonth[key].total += v;
   }
 
   return {

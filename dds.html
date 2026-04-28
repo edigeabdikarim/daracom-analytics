@@ -740,7 +740,7 @@ function loadBalanceSummary() {
 
 // ─── NONCASH ARCHIVE (исторические остатки на конец месяца) ──
 const NONCASH_ARCHIVE_CACHE_KEY = 'dds_noncash_archive_cache';
-const NONCASH_ARCHIVE_CACHE_VER = 'v1';
+const NONCASH_ARCHIVE_CACHE_VER = 'v2'; // v2: byMonth теперь объект { total, byDirection }
 const NONCASH_ARCHIVE_TTL_MS = 30 * 60 * 1000; // 30 минут
 
 function loadNoncashArchive() {
@@ -821,10 +821,15 @@ function cashTotalForMonth(month) {
   return CASH_WALLETS.reduce(function(s, e) { return s + (w[e.key] || 0); }, 0);
 }
 
-function noncashTotalAtEndOfMonth(month, year) {
+function noncashEntryAtEndOfMonth(month, year) {
   if (!noncashArchive || !noncashArchive.byMonth) return null;
-  const v = noncashArchive.byMonth[archiveKeyForEndOfMonth(month, year)];
-  return (typeof v === 'number') ? v : null;
+  const e = noncashArchive.byMonth[archiveKeyForEndOfMonth(month, year)];
+  return (e && typeof e.total === 'number') ? e : null;
+}
+
+function noncashTotalAtEndOfMonth(month, year) {
+  const e = noncashEntryAtEndOfMonth(month, year);
+  return e ? e.total : null;
 }
 
 function calcBalance(month) {
@@ -1001,6 +1006,7 @@ const CASH_WALLETS = [
 ];
 // Безналичные остатки тянутся отдельно (live, лист «Остатки по безналу»)
 // и рендерятся матрицей направление × банк — см. renderNoncashMatrix().
+const NONCASH_DIRECTIONS_ORDER = ['Абайка', 'Восход', 'Есентай', 'Астана', 'ИП Daracom'];
 
 function renderKPI() {
   const { incoming, outgoing, netCF, opExpenses } = calcKPI(filteredRows);
@@ -1045,7 +1051,7 @@ function renderKPI() {
       <div class="kpi-label">Выбытия</div>
       <div class="kpi-value">${fmt(outgoing)}</div>
     </div>
-    <div class="kpi-card" style="border-left:3px solid #8B5CF6;">
+    <div class="kpi-card" style="border-left:3px solid #8B5CF6;cursor:default" onmouseenter="showKPITooltip(event,'balend')" onmouseleave="hideTooltip()">
       <div class="kpi-label">Остаток на конец месяца</div>
       ${balanceEndHtml}
       <div style="font-size:11px;color:#9CA3AF;margin-top:6px">по всей компании${filterWarn}</div>
@@ -2779,26 +2785,64 @@ function showKPITooltip(e, type) {
       </div>`;
     });
 
-  } else if (type === 'balstart') {
-    if (!monthlyBalance) return;
-    const months = Object.keys(monthlyBalance).map(Number).sort((a, b) => a - b);
-    if (!months.length) return;
-    const balVals = months.map(m => monthlyBalance[m] ? monthlyBalance[m].balance : null).filter(v => v !== null);
-    const max = Math.max(...balVals.map(Math.abs));
-    const mNames = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
-    html = `<div class="art-tooltip-title">Остаток на начало месяца</div>`;
-    months.forEach(m => {
-      const bal = monthlyBalance[m] ? monthlyBalance[m].balance : null;
-      if (bal === null) return;
-      const barW = max > 0 ? Math.round(Math.abs(bal) / max * 44) : 0;
-      const c = bal >= 0 ? cInc : cExp;
-      const isCur = m === currentMonth;
-      html += `<div class="art-tooltip-row" style="${isCur ? 'opacity:1' : 'opacity:0.7'}">
-        <div class="art-tooltip-store">${mNames[m-1]}${isCur ? ' ◀' : ''}</div>
-        <div class="art-tooltip-bar-wrap"><div class="art-tooltip-bar-fill" style="width:${barW}px;background:${c}"></div></div>
-        <div class="art-tooltip-amt" style="color:${c}">${fmtShort(bal)}</div>
+  } else if (type === 'balstart' || type === 'balend') {
+    const bal = (monthlyBalance && (noncashArchive || noncashBalances)) ? calcBalance(currentMonth) : null;
+    if (!bal) return;
+
+    const isStart = (type === 'balstart');
+    const cashVal = isStart ? bal.cashStart : bal.cashEnd;
+    const noncashVal = isStart ? bal.noncashStart : bal.noncashEnd;
+    const totalVal = isStart ? bal.balanceStart : bal.balanceEnd;
+    if (totalVal === null) return; // нет данных — тултип не показываем
+
+    // Разбивка безнала по 5 направлениям
+    let byDir = null;
+    if (isStart) {
+      let prevMonth = currentMonth - 1, prevYear = DASHBOARD_YEAR;
+      if (prevMonth === 0) { prevMonth = 12; prevYear = DASHBOARD_YEAR - 1; }
+      const e = noncashEntryAtEndOfMonth(prevMonth, prevYear);
+      byDir = e ? e.byDirection : null;
+    } else {
+      const now = new Date().getMonth() + 1;
+      const isCurrentMonth = currentMonth >= now;
+      if (isCurrentMonth) {
+        byDir = (noncashBalances && noncashBalances.totalsByDirection) || null;
+      } else {
+        const e = noncashEntryAtEndOfMonth(currentMonth, DASHBOARD_YEAR);
+        byDir = e ? e.byDirection : null;
+      }
+    }
+
+    const title = isStart ? 'Детализация: остаток на начало' : 'Детализация: остаток на конец';
+    html = `<div class="art-tooltip-title">${title}</div>`;
+
+    // Шкала по самой большой сумме среди строк (наличные + 5 направлений)
+    const allVals = [Math.abs(cashVal || 0)];
+    if (byDir) NONCASH_DIRECTIONS_ORDER.forEach(d => allVals.push(Math.abs(byDir[d] || 0)));
+    const max = Math.max.apply(null, allVals);
+
+    function row(label, amt, color) {
+      const barW = (max > 0 && amt) ? Math.round(Math.abs(amt) / max * 44) : 0;
+      return `<div class="art-tooltip-row">
+        <div class="art-tooltip-store">${escHtml(label)}</div>
+        <div class="art-tooltip-bar-wrap"><div class="art-tooltip-bar-fill" style="width:${barW}px;background:${color}"></div></div>
+        <div class="art-tooltip-amt" style="color:${color}">${fmt(amt || 0)}</div>
       </div>`;
-    });
+    }
+
+    html += row('💵 Наличные', cashVal || 0, cInc);
+    if (byDir) {
+      NONCASH_DIRECTIONS_ORDER.forEach(d => {
+        html += row('🏦 ' + d, byDir[d] || 0, cNeu);
+      });
+    } else if (noncashVal !== null) {
+      html += row('🏦 Безналичные', noncashVal, cNeu);
+    }
+    html += `<div class="art-tooltip-row" style="border-top:1px solid #374151;padding-top:6px;margin-top:4px;font-weight:700">
+      <div class="art-tooltip-store">Итого</div>
+      <div class="art-tooltip-bar-wrap"></div>
+      <div class="art-tooltip-amt" style="color:#A78BFA">${fmt(totalVal)}</div>
+    </div>`;
   }
 
   if (!html) return;
