@@ -815,10 +815,20 @@ function archiveKeyForEndOfMonth(month, year) {
   return year + '-' + String(month).padStart(2, '0');
 }
 
+// Полный наличный остаток на начало month — берётся как
+//   (Денег на начало месяца) − (сумма всех безналичных кошельков «б/н»)
+// «Денег на начало месяца» в «ДДС: Сводный» равно сумме ВСЕХ кошельков
+// (включая личные/валютные — Рауан, Гульжан, €, $ и т.п.), поэтому
+// вычитанием безнала получаем все наличные сразу, без ведения списка.
 function cashTotalForMonth(month) {
-  if (!monthlyBalance || !monthlyBalance[month] || !monthlyBalance[month].wallets) return null;
-  const w = monthlyBalance[month].wallets;
-  return CASH_WALLETS.reduce(function(s, e) { return s + (w[e.key] || 0); }, 0);
+  if (!monthlyBalance || !monthlyBalance[month]) return null;
+  const m = monthlyBalance[month];
+  if (typeof m.balance !== 'number' || !m.wallets) return null;
+  let noncashFromDDS = 0;
+  Object.keys(m.wallets).forEach(function(k) {
+    if (/б\/н/.test(k)) noncashFromDDS += (m.wallets[k] || 0);
+  });
+  return m.balance - noncashFromDDS;
 }
 
 function noncashEntryAtEndOfMonth(month, year) {
