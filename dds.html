@@ -81,7 +81,25 @@
     .wr-row.wr-total { border-top: 2px solid #E5E7EB; border-bottom: none; margin-top: 4px; padding-top: 8px; }
     .wr-row.wr-total .wr-label { font-weight: 700; color: #111827; }
     .wr-row.wr-total .wr-val { font-size: 14px; color: #8B5CF6; }
-    @media (max-width: 640px) { .wr-cols { grid-template-columns: 1fr; } }
+    .wr-cols { grid-template-columns: minmax(0,1fr) minmax(0,1.35fr); }
+    @media (max-width: 900px) { .wr-cols { grid-template-columns: 1fr; } }
+    .wr-col-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #F3F4F6; }
+    .wr-col-head .wr-col-title { margin-bottom: 0; padding-bottom: 0; border-bottom: none; flex: 1; }
+    .wr-col-badge { display: inline-block; font-size: 10px; font-weight: 600; color: #10B981; background: #D1FAE5; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.02em; }
+    .wr-col-badge.wr-badge-month { color: #6B7280; background: #F3F4F6; }
+    .wr-matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .wr-matrix th, .wr-matrix td { padding: 6px 6px; text-align: right; border-bottom: 1px solid #F9FAFB; white-space: nowrap; }
+    .wr-matrix thead th { font-weight: 700; color: #6B7280; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #E5E7EB; padding: 4px 6px; }
+    .wr-matrix th:first-child, .wr-matrix td:first-child { text-align: left; padding-left: 0; }
+    .wr-matrix th:last-child, .wr-matrix td:last-child { padding-right: 0; }
+    .wr-matrix tbody td:first-child { font-weight: 500; color: #374151; font-size: 12px; }
+    .wr-matrix tbody td { font-family: 'JetBrains Mono', 'Courier New', monospace; font-weight: 600; color: #111827; }
+    .wr-matrix tbody td.wr-mat-empty { color: #D1D5DB; font-weight: 400; }
+    .wr-matrix tbody td.wr-mat-rowtotal { color: #8B5CF6; font-weight: 700; }
+    .wr-matrix tfoot td { border-top: 2px solid #E5E7EB; border-bottom: none; padding-top: 8px; font-weight: 700; }
+    .wr-matrix tfoot td:first-child { color: #111827; font-family: inherit; font-size: 12px; }
+    .wr-matrix tfoot td.wr-mat-grand { color: #8B5CF6; font-size: 13px; }
+    .wr-mat-loading { padding: 24px 0; text-align: center; color: #9CA3AF; font-size: 12px; }
 
     /* Section */
     .section { display: none; }
@@ -626,6 +644,7 @@ let allRows = [];
 let filteredRows = [];
 let currentMonth = new Date().getMonth() + 1;
 let monthlyBalance = null; // { "1": { incoming, outgoing }, ... } — данные по всем месяцам
+let noncashBalances = null; // актуальные остатки по безналу (направление × банк)
 let allMonthsData = {};    // { month: rows[] } — сырые строки по каждому месяцу
 let allMonthsLoaded = {};  // { month: 'loading'|'done'|'error' }
 let expensesTab = 'list';  // 'list' | 'table'
@@ -642,6 +661,7 @@ const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','
     loadData();
   });
   loadBalanceSummary();
+  loadNoncashBalances();
   loadData();
 })();
 
@@ -716,6 +736,37 @@ function loadBalanceSummary() {
     .catch(() => { /* баланс не критичен */ });
 }
 
+// ─── NONCASH BALANCES (live, отдельный источник) ─────
+const NONCASH_CACHE_KEY = 'dds_noncash_balance_cache';
+const NONCASH_CACHE_VER = 'v1';
+const NONCASH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 минут — данные «живые»
+
+function loadNoncashBalances() {
+  try {
+    const cached = localStorage.getItem(NONCASH_CACHE_KEY);
+    if (cached) {
+      const { ts, data, ver } = JSON.parse(cached);
+      if (ver === NONCASH_CACHE_VER && Date.now() - ts < NONCASH_CACHE_TTL_MS) {
+        noncashBalances = data;
+        return;
+      }
+    }
+  } catch(e) { /* ignore */ }
+
+  fetch(DDS_GAS_URL + '?action=noncash_balances')
+    .then(r => r.json())
+    .then(resp => {
+      if (!resp.ok) return;
+      noncashBalances = resp.data;
+      safeSetItem(NONCASH_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: resp.data, ver: NONCASH_CACHE_VER }));
+      if (document.getElementById('stateContent').style.display !== 'none' &&
+          !document.getElementById('stateContent').classList.contains('hidden')) {
+        renderWallets();
+      }
+    })
+    .catch(() => { /* блок остатков не критичен */ });
+}
+
 // Вычисляет остаток на начало и конец указанного месяца
 // Данные берутся напрямую из «ДДС: Сводный» (строка «Денег на начало месяца»)
 function calcBalance(month) {
@@ -730,9 +781,12 @@ function calcBalance(month) {
 function refreshData() {
   localStorage.removeItem('dds_cache_month_' + currentMonth);
   localStorage.removeItem('dds_balance_cache');
+  localStorage.removeItem(NONCASH_CACHE_KEY);
   delete allMonthsLoaded[currentMonth];
   monthlyBalance = null;
+  noncashBalances = null;
   loadBalanceSummary();
+  loadNoncashBalances();
   loadData();
 }
 
@@ -862,13 +916,8 @@ const CASH_WALLETS = [
   { key: 'ИП Абдыкарим нал',            label: 'Астана'        },
   { key: 'ИП Daracom Above нал Астана', label: 'Above Астана'  },
 ];
-const NONCASH_WALLETS = [
-  { keys: ['ИП Daracom б/н Мира', 'ИП Daracom б/н Above', 'ИП Daracom б/н Above Астана'], label: 'ИП Daracom' },
-  { key: 'ИП Ахметова б/н',    label: 'Есентай' },
-  { key: 'ИП Базарханова б/н', label: 'Абайка'  },
-  { key: 'ИП Нурсоветов б/н',  label: 'Восход'  },
-  { key: 'ИП Абдыкарим б/н',   label: 'Астана'  },
-];
+// Безналичные остатки тянутся отдельно (live, лист «Остатки по безналу»)
+// и рендерятся матрицей направление × банк — см. renderNoncashMatrix().
 
 function renderKPI() {
   const { incoming, outgoing, netCF, opExpenses } = calcKPI(filteredRows);
@@ -934,7 +983,10 @@ function renderWallets() {
   const el = document.getElementById('walletsBlock');
   if (!el) return;
 
-  if (!monthlyBalance || !monthlyBalance[currentMonth] || !monthlyBalance[currentMonth].wallets) {
+  const hasCash = !!(monthlyBalance && monthlyBalance[currentMonth] && monthlyBalance[currentMonth].wallets);
+  const hasNoncash = !!(noncashBalances && noncashBalances.directions);
+
+  if (!hasCash && !hasNoncash) {
     el.style.display = 'none';
     return;
   }
@@ -942,6 +994,7 @@ function renderWallets() {
   const now = new Date().getMonth() + 1;
   const isCurrentMonth = currentMonth >= now;
 
+  // ── НАЛИЧНЫЕ ──
   function walletRow(entry) {
     const valStart = getWalletVal(entry, currentMonth);
     if (isCurrentMonth) {
@@ -961,33 +1014,97 @@ function renderWallets() {
       '</div>';
   }
 
-  const cashTotal = CASH_WALLETS.reduce(function(s, e) { return s + getWalletVal(e, currentMonth); }, 0);
-  const noncashTotal = NONCASH_WALLETS.reduce(function(s, e) { return s + getWalletVal(e, currentMonth); }, 0);
-
-  el.style.display = '';
-  el.innerHTML =
-    '<div class="wr-header">' +
-      '<span class="wr-title">Остатки по кошелькам</span>' +
-      (isCurrentMonth ? '<span class="wr-badge">● Актуально</span>' : '') +
-    '</div>' +
-    '<div class="wr-cols">' +
+  let cashHtml;
+  if (hasCash) {
+    const cashTotal = CASH_WALLETS.reduce(function(s, e) { return s + getWalletVal(e, currentMonth); }, 0);
+    const cashBadge = isCurrentMonth
+      ? '<span class="wr-col-badge">● Актуально</span>'
+      : '<span class="wr-col-badge wr-badge-month">' + MONTH_NAMES[currentMonth - 1] + '</span>';
+    cashHtml =
       '<div class="wr-col">' +
-        '<div class="wr-col-title">💵 Наличные</div>' +
+        '<div class="wr-col-head">' +
+          '<div class="wr-col-title">💵 Наличные</div>' +
+          cashBadge +
+        '</div>' +
         CASH_WALLETS.map(walletRow).join('') +
         '<div class="wr-row wr-total">' +
           '<span class="wr-label">Итого</span>' +
           '<span class="wr-val">' + fmt(cashTotal) + '</span>' +
         '</div>' +
-      '</div>' +
+      '</div>';
+  } else {
+    cashHtml =
       '<div class="wr-col">' +
-        '<div class="wr-col-title">🏦 Безналичные</div>' +
-        NONCASH_WALLETS.map(walletRow).join('') +
-        '<div class="wr-row wr-total">' +
-          '<span class="wr-label">Итого</span>' +
-          '<span class="wr-val">' + fmt(noncashTotal) + '</span>' +
-        '</div>' +
-      '</div>' +
+        '<div class="wr-col-head"><div class="wr-col-title">💵 Наличные</div></div>' +
+        '<div class="wr-mat-loading">Загрузка…</div>' +
+      '</div>';
+  }
+
+  // ── БЕЗНАЛИЧНЫЕ (матрица направление × банк) ──
+  const noncashHtml = renderNoncashMatrix();
+
+  el.style.display = '';
+  el.innerHTML =
+    '<div class="wr-header">' +
+      '<span class="wr-title">Остатки по кошелькам</span>' +
+    '</div>' +
+    '<div class="wr-cols">' +
+      cashHtml +
+      noncashHtml +
     '</div>';
+}
+
+function renderNoncashMatrix() {
+  if (!noncashBalances || !noncashBalances.directions) {
+    return '<div class="wr-col">' +
+      '<div class="wr-col-head">' +
+        '<div class="wr-col-title">🏦 Безналичные</div>' +
+        '<span class="wr-col-badge">● Live</span>' +
+      '</div>' +
+      '<div class="wr-mat-loading">Загрузка…</div>' +
+    '</div>';
+  }
+
+  const dirs  = noncashBalances.directions;
+  const banks = noncashBalances.banks;
+  const vals  = noncashBalances.values || {};
+
+  let head = '<thead><tr><th></th>';
+  banks.forEach(function(b) { head += '<th>' + escHtml(b) + '</th>'; });
+  head += '<th>Итого</th></tr></thead>';
+
+  let body = '<tbody>';
+  dirs.forEach(function(d) {
+    body += '<tr><td>' + escHtml(d) + '</td>';
+    banks.forEach(function(b) {
+      const v = (vals[d] && vals[d][b]) || 0;
+      if (v === 0) {
+        body += '<td class="wr-mat-empty">—</td>';
+      } else {
+        body += '<td>' + fmt(v) + '</td>';
+      }
+    });
+    const rowTotal = (noncashBalances.totalsByDirection && noncashBalances.totalsByDirection[d]) || 0;
+    body += '<td class="wr-mat-rowtotal">' + fmt(rowTotal) + '</td>';
+    body += '</tr>';
+  });
+  body += '</tbody>';
+
+  let foot = '<tfoot><tr><td>Итого</td>';
+  banks.forEach(function(b) {
+    const v = (noncashBalances.totalsByBank && noncashBalances.totalsByBank[b]) || 0;
+    foot += '<td>' + fmt(v) + '</td>';
+  });
+  foot += '<td class="wr-mat-grand">' + fmt(noncashBalances.grandTotal || 0) + '</td>';
+  foot += '</tr></tfoot>';
+
+  return '<div class="wr-col">' +
+    '<div class="wr-col-head">' +
+      '<div class="wr-col-title">🏦 Безналичные</div>' +
+      '<span class="wr-col-badge">● Live</span>' +
+    '</div>' +
+    '<table class="wr-matrix">' + head + body + foot + '</table>' +
+  '</div>';
 }
 
 // ─── TOP-5 CHART ──────────────────────────────────────

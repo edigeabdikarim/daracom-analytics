@@ -47,6 +47,10 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'dds_balance') {
     return doGetDDSBalance();
   }
+  // Роутинг: ?action=noncash_balances → актуальные остатки по безналу (направление × банк)
+  if (e && e.parameter && e.parameter.action === 'noncash_balances') {
+    return doGetNoncashBalances();
+  }
   if (e && e.parameter && e.parameter.action === 'opiu') {
     return doGetOPiU(e);
   }

@@ -1,0 +1,6 @@
+# clasp pushes only files inside rootDir (gas/) — этот файл нужен только для подстраховки
+**/node_modules/**
+**/.git/**
+**/*.html
+**/*.md
+**/docs/**

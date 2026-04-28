@@ -5,6 +5,9 @@
  */
 
 const DDS_SHEET_ID = '171I_chBn4SzuinIL4USP8QI9FL8g1X0MQEwqFwDuscc';
+const NONCASH_BALANCE_SHEET_ID = '1waI5gAZyh6Rz156L7YWQVVXOj5GogPejikuOlSSu3w8';
+const NONCASH_BANKS = ['Народный', 'Фридом', 'БЦК', 'Каспий'];
+const NONCASH_DIRECTIONS = ['Абайка', 'Восход', 'Есентай', 'Астана', 'ИП Daracom'];
 
 /**
  * Точка входа для ДДС (вызывается из dashboard.gs doGet при ?action=dds)
@@ -175,6 +178,98 @@ function doGetDDSBalance() {
     const summary = getDDSBalanceSummary();
     return ContentService
       .createTextOutput(JSON.stringify({ ok: true, data: summary }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Парсер денежной строки вида "₸90 581,33" / "1 234.56" → Number
+ */
+function parseTengeStr(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number') return v;
+  const s = String(v)
+    .replace(/[₸\s  ]/g, '')
+    .replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+/**
+ * Читает лист «Остатки по безналу» из отдельной таблицы и собирает
+ * матрицу остатков по направлениям и банкам.
+ * Возвращает объект:
+ *   {
+ *     directions: ['Абайка', 'Восход', ...],
+ *     banks:      ['Народный', 'Фридом', 'БЦК', 'Каспий'],
+ *     values:     { 'Абайка': { 'Народный': 90581.33, ... }, ... },
+ *     totalsByDirection: { 'Абайка': 1639370.22, ... },
+ *     totalsByBank:      { 'Народный': 4220895.55, ... },
+ *     grandTotal:        N,
+ *     updatedAt:         '2026-04-28T12:00:00Z'
+ *   }
+ */
+function getNoncashBalances() {
+  const ss = SpreadsheetApp.openById(NONCASH_BALANCE_SHEET_ID);
+  const sheet = ss.getSheetByName('Остатки по безналу');
+  if (!sheet) throw new Error('Лист "Остатки по безналу" не найден');
+
+  const data = sheet.getDataRange().getValues();
+  const values = {};
+  NONCASH_DIRECTIONS.forEach(function(d) {
+    values[d] = {};
+    NONCASH_BANKS.forEach(function(b) { values[d][b] = 0; });
+  });
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const direction = String(row[1] || '').trim();
+    const bank = String(row[2] || '').trim();
+    if (!direction || !bank) continue;
+    if (NONCASH_DIRECTIONS.indexOf(direction) === -1) continue;
+    if (NONCASH_BANKS.indexOf(bank) === -1) continue;
+    values[direction][bank] = parseTengeStr(row[3]);
+  }
+
+  const totalsByDirection = {};
+  const totalsByBank = {};
+  NONCASH_BANKS.forEach(function(b) { totalsByBank[b] = 0; });
+  let grandTotal = 0;
+
+  NONCASH_DIRECTIONS.forEach(function(d) {
+    let rowSum = 0;
+    NONCASH_BANKS.forEach(function(b) {
+      const v = values[d][b] || 0;
+      rowSum += v;
+      totalsByBank[b] += v;
+    });
+    totalsByDirection[d] = rowSum;
+    grandTotal += rowSum;
+  });
+
+  return {
+    directions: NONCASH_DIRECTIONS,
+    banks: NONCASH_BANKS,
+    values: values,
+    totalsByDirection: totalsByDirection,
+    totalsByBank: totalsByBank,
+    grandTotal: grandTotal,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Endpoint: ?action=noncash_balances
+ */
+function doGetNoncashBalances() {
+  try {
+    const data = getNoncashBalances();
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true, data: data }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService
