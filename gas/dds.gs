@@ -116,20 +116,37 @@ function getDDSBalanceSummary() {
     'ИП Абдыкарим б/н',
   ];
 
-  const svodnyData = svodny.getDataRange().getValues();
-  let balanceRow = null;
-  const walletRows = {};
+  // ВАЖНО: в листе «ДДС: Сводный» wallet-лейблы повторяются дважды —
+  // верхний блок (под «Денег на начало месяца») = снимки НА НАЧАЛО месяца,
+  // нижний блок (под «Денег на конец месяца») = снимки НА КОНЕЦ месяца.
+  // Берём ТОЛЬКО первое совпадение и стопим сканирование на «Денег на конец
+  // месяца», иначе wallet-данные оказываются сдвинуты на месяц вперёд
+  // (т.к. end-of-month-N = start-of-month-(N+1)).
+  const lastRow = svodny.getLastRow();
+  const labelsCol = svodny.getRange(1, 1, lastRow, 1).getValues();
 
-  for (let i = 0; i < svodnyData.length; i++) {
-    const label = String(svodnyData[i][0]).trim();
+  let balanceRowNum = -1;
+  const walletRowNums = {};
+  for (let i = 0; i < labelsCol.length; i++) {
+    const label = String(labelsCol[i][0]).trim();
     if (label === 'Денег на начало месяца') {
-      balanceRow = svodnyData[i];
-    } else if (WALLET_KEYS.includes(label)) {
-      walletRows[label] = svodnyData[i];
+      balanceRowNum = i + 1;
+    } else if (label === 'Денег на конец месяца') {
+      break; // дальше идёт дубль кошельков с end-of-month значениями — пропускаем
+    } else if (WALLET_KEYS.includes(label) && !walletRowNums[label]) {
+      walletRowNums[label] = i + 1;
     }
   }
 
-  if (!balanceRow) throw new Error('Строка "Денег на начало месяца" не найдена');
+  if (balanceRowNum < 0) throw new Error('Строка "Денег на начало месяца" не найдена');
+
+  const balanceMonths = svodny.getRange(balanceRowNum, 2, 1, 12).getValues()[0];
+  const walletMonths = {};
+  WALLET_KEYS.forEach(function(key) {
+    if (walletRowNums[key]) {
+      walletMonths[key] = svodny.getRange(walletRowNums[key], 2, 1, 12).getValues()[0];
+    }
+  });
 
   // Месяцы, в которых есть хотя бы одна транзакция
   const monthSheet = ss.getSheetByName('ДДС: месяц');
@@ -159,10 +176,10 @@ function getDDSBalanceSummary() {
   for (let i = 0; i < 12; i++) {
     const wallets = {};
     WALLET_KEYS.forEach(function(key) {
-      wallets[key] = walletRows[key] ? parseNumDDS(walletRows[key][i + 1]) : 0;
+      wallets[key] = walletMonths[key] ? parseNumDDS(walletMonths[key][i]) : 0;
     });
     result[i + 1] = {
-      balance: parseNumDDS(balanceRow[i + 1]),
+      balance: parseNumDDS(balanceMonths[i]),
       wallets: wallets
     };
   }

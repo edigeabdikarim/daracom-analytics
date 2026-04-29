@@ -710,7 +710,7 @@ function safeSetItem(key, value) {
 function loadBalanceSummary() {
   const cacheKey = 'dds_balance_cache';
   // Версия логики — при смене сбрасываем кэш
-  const BALANCE_VERSION = 'v4-with-wallets';
+  const BALANCE_VERSION = 'v5-fix-wallet-shift';
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
