@@ -710,7 +710,7 @@ function safeSetItem(key, value) {
 function loadBalanceSummary() {
   const cacheKey = 'dds_balance_cache';
   // Версия логики — при смене сбрасываем кэш
-  const BALANCE_VERSION = 'v5-fix-wallet-shift';
+  const BALANCE_VERSION = 'v6-current-month-end-live';
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
@@ -838,16 +838,18 @@ function noncashTotalAtEndOfMonth(month, year) {
 
 function calcBalance(month) {
   const now = new Date().getMonth() + 1;
-  const isCurrentMonth = month >= now;
+  const isFuture = month > now;
 
   // ── Наличные ──
-  // Для текущего/будущего месяца «конец месяца» ≡ «сейчас» — то же значение,
-  // что показывает правая матрица. Только для прошлых закрытых месяцев
-  // берём снимок начала следующего месяца (= конец текущего).
+  // Для прошлых И текущего месяца «конец месяца» = снимок начала следующего
+  // месяца (end-of-N = start-of-(N+1)). Лист пересчитывается «вживую», поэтому
+  // для current month это даёт актуальное значение «сейчас». Только для будущих
+  // месяцев конец ≡ начало (никаких end-данных там ещё нет).
   const cashStart = cashTotalForMonth(month);
-  const cashEnd = isCurrentMonth
+  const cashNext = cashTotalForMonth(month + 1);
+  const cashEnd = isFuture
     ? cashStart
-    : ((cashTotalForMonth(month + 1) !== null) ? cashTotalForMonth(month + 1) : cashStart);
+    : ((cashNext !== null) ? cashNext : cashStart);
 
   // ── Безналичные: начало = конец предыдущего месяца ──
   let prevMonth = month - 1, prevYear = DASHBOARD_YEAR;
@@ -856,8 +858,8 @@ function calcBalance(month) {
 
   // ── Безналичные: конец ──
   let noncashEnd;
-  if (isCurrentMonth) {
-    // для текущего месяца архива ещё нет → берём live-остаток
+  if (month >= now) {
+    // текущий или будущий месяц — архива ещё нет → берём live-остаток
     noncashEnd = (noncashBalances && typeof noncashBalances.grandTotal === 'number')
       ? noncashBalances.grandTotal
       : null;
@@ -1097,18 +1099,29 @@ function renderWallets() {
   }
 
   const now = new Date().getMonth() + 1;
-  const isCurrentMonth = currentMonth >= now;
+  const isPast = currentMonth < now;
+  const isCurrent = currentMonth === now;
+  const isFuture = currentMonth > now;
 
   // ── НАЛИЧНЫЕ ──
+  // past: start → end (= снимок начала следующего месяца)
+  // current: одно значение = «сейчас» (= снимок начала следующего месяца)
+  // future: одно значение = start (end-данных ещё нет)
   function walletRow(entry) {
     const valStart = getWalletVal(entry, currentMonth);
-    if (isCurrentMonth) {
+    const valEnd = getWalletVal(entry, currentMonth + 1);
+    if (isCurrent) {
+      return '<div class="wr-row">' +
+        '<span class="wr-label">' + entry.label + '</span>' +
+        '<span class="wr-val">' + fmt(valEnd) + '</span>' +
+        '</div>';
+    }
+    if (isFuture) {
       return '<div class="wr-row">' +
         '<span class="wr-label">' + entry.label + '</span>' +
         '<span class="wr-val">' + fmt(valStart) + '</span>' +
         '</div>';
     }
-    const valEnd = getWalletVal(entry, currentMonth + 1);
     return '<div class="wr-row">' +
       '<span class="wr-label">' + entry.label + '</span>' +
       '<span class="wr-pair">' +
@@ -1121,10 +1134,35 @@ function renderWallets() {
 
   let cashHtml;
   if (hasCash) {
-    const cashTotal = CASH_WALLETS.reduce(function(s, e) { return s + getWalletVal(e, currentMonth); }, 0);
-    const cashBadge = isCurrentMonth
+    const cashTotalStart = CASH_WALLETS.reduce(function(s, e) { return s + getWalletVal(e, currentMonth); }, 0);
+    const cashTotalEnd = CASH_WALLETS.reduce(function(s, e) { return s + getWalletVal(e, currentMonth + 1); }, 0);
+    const cashBadge = isCurrent
       ? '<span class="wr-col-badge">● Актуально</span>'
       : '<span class="wr-col-badge wr-badge-month">' + MONTH_NAMES[currentMonth - 1] + '</span>';
+    let totalRowHtml;
+    if (isCurrent) {
+      totalRowHtml =
+        '<div class="wr-row wr-total">' +
+          '<span class="wr-label">Итого</span>' +
+          '<span class="wr-val">' + fmt(cashTotalEnd) + '</span>' +
+        '</div>';
+    } else if (isFuture) {
+      totalRowHtml =
+        '<div class="wr-row wr-total">' +
+          '<span class="wr-label">Итого</span>' +
+          '<span class="wr-val">' + fmt(cashTotalStart) + '</span>' +
+        '</div>';
+    } else {
+      totalRowHtml =
+        '<div class="wr-row wr-total">' +
+          '<span class="wr-label">Итого</span>' +
+          '<span class="wr-pair">' +
+            '<span class="wr-start">' + fmt(cashTotalStart) + '</span>' +
+            '<span class="wr-arrow">→</span>' +
+            '<span class="wr-end">' + fmt(cashTotalEnd) + '</span>' +
+          '</span>' +
+        '</div>';
+    }
     cashHtml =
       '<div class="wr-col">' +
         '<div class="wr-col-head">' +
@@ -1132,10 +1170,7 @@ function renderWallets() {
           cashBadge +
         '</div>' +
         CASH_WALLETS.map(walletRow).join('') +
-        '<div class="wr-row wr-total">' +
-          '<span class="wr-label">Итого</span>' +
-          '<span class="wr-val">' + fmt(cashTotal) + '</span>' +
-        '</div>' +
+        totalRowHtml +
       '</div>';
   } else {
     cashHtml =
